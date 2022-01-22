@@ -1,0 +1,71 @@
+//@version=5
+strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, margin_long=$MARGIN_PERCENT, margin_short=$MARGIN_PERCENT, initial_capital=$INITIAL_CAPITAL, commission_type=$COMMISSION_TYPE, commission_value=$COMMISSION_PERCENT)
+
+// Smoothing inputs
+smoothingTypeInput = input.string($SMOOTHING_TYPE, 'Method:', options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'ZLEMA', 'HMA'], inline="MA", group="Smoothing")
+smoothingLengthInput = input.int($SMOOTHING_LENGTH, 'Length:', minval=2, inline="MA", group="Smoothing")
+almaOffsetInput = input.float($ALMA_OFFSET, "ALMA offset:", step=0.01, minval=0.0, inline="ALMA", group="Smoothing")
+almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", minval=1, inline="ALMA", group="Smoothing")
+
+// Bollinger Bands inputs
+devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN'], inline="BB", group="Bollinger Bands")
+multInput = input.float($DEVIATION_MULT, 'Factor:', minval=0.1, maxval=50, step=0.1, inline="BB", group="Bollinger Bands")
+
+timeframeInput = input.timeframe($BB_TIMEFRAME, "Resolution:", group="Bollinger Bands")
+baseInput = input.source($BB_BASE, "Base:", inline="UpperLower", group="Bollinger Bands")
+upperInput = input.source($BB_UPPER, "Upper:", inline="UpperLower", group="Bollinger Bands")
+lowerInput = input.source($BB_LOWER, "Lower:", inline="UpperLower", group="Bollinger Bands")
+
+// Trade Inputs
+tradeTypeInput = input.string($TRADE_TYPE, 'Trade Type:', options=['long', 'short', 'long+short'], inline="qd", group="Trading")
+tradeSizeInput = input.float($TRADE_SIZE, 'Trade Size:', minval=0.001, maxval=50, step=0.001, inline="qd", group="Trading")
+buyInput = input.source($TRADE_BUY_SOURCE, "Buy Source:", inline="BuySell", group="Trading")
+sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="BuySell", group="Trading")
+
+// MA Chooser function
+movingAverage(source, length) =>
+    switch smoothingTypeInput
+        "ALMA" => ta.alma(source, length, almaOffsetInput, almaSigmaInput)
+        "EMA" => ta.ema(source, length)
+        "HMA" => ta.ema(source, length)
+        "RMA" => ta.rma(source, length)
+        "SMA" => ta.sma(source, length)
+        "VWMA" => ta.vwma(source, length)
+        "WMA" => ta.wma(source, length)
+        => na
+
+// Deviation chooser function
+deviation(source, length) =>
+    switch devTypeInput
+        "STD" => ta.stdev(source, length)
+        "MEAN" => ta.dev(source, length) 
+        => na
+
+// Get signals
+base = request.security(syminfo.tickerid, timeframeInput, baseInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
+upper = request.security(syminfo.tickerid, timeframeInput, upperInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
+lower = request.security(syminfo.tickerid, timeframeInput, lowerInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
+
+// Parts of the BB
+basis = movingAverage(base, smoothingLengthInput)
+upperBand = movingAverage(upper, smoothingLengthInput) + multInput * deviation(upper, smoothingLengthInput)
+lowerBand = movingAverage(lower, smoothingLengthInput) - multInput * deviation(lower, smoothingLengthInput)
+
+// Plotting
+tealLine = color.new(color.teal, 40)
+plot(basis, 'Basis', color=tealLine, linewidth=2)
+p1 = plot(upperBand, 'Upper', color=tealLine, linewidth=1)
+p2 = plot(lowerBand, 'Lower', color=tealLine, linewidth=1)
+fill(p1, p2, color=color.new(color.teal, 90))
+
+// Trigger conditions
+isSellOpportunity = sellInput >= upperBand
+isBuyOpportunity = buyInput <= lowerBand
+
+// Entry & Exit
+if str.match(tradeTypeInput, "\\blong\\b") == "long"
+    strategy.entry("buy", strategy.long, when=isBuyOpportunity, qty=tradeSizeInput)
+    strategy.close("buy", when=isSellOpportunity)
+if str.match(tradeTypeInput, "\\bshort\\b") == "short"
+    strategy.entry("sell", strategy.short, when=isSellOpportunity, qty=tradeSizeInput)
+    strategy.close("sell", when=isBuyOpportunity)

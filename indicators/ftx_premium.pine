@@ -1,0 +1,84 @@
+//@version=5
+// Copyright © Zalan Blenessy 2021
+indicator('FTX Premium Indicator', 'PREM', overlay=false, precision=4)
+
+// Inputs
+tickersInput = input.string("PERP/USD", "Tickers:", options=["PERP/USD","0325/USD","0325/PERP","0624/USD","0624/PERP","0624/0325"], inline="Ticker")
+tickerSourceInput = input.string("close", "Source:", options=["open","close","oc2","occ3","occc4"], inline="Ticker")
+smoothingTypeInput = input.string("SMA", "Smoothing:", options=["ALMA", "EMA", "HMA", "RMA", "SMA", "VWMA", "WMA"], inline="MA")
+smoothingLengthInput = input.int(20, "Length:", minval=2, inline="MA")
+almaOffsetInput = input.float(0.85, "ALMA offset:", step=0.01, minval=0.0, inline="ALMA")
+almaSigmaInput = input.float(6, "Sigma:", minval=1, inline="ALMA")
+bandsFactorInput = input.float(2.0, "Bollinger Band Factor:", minval=0.1, step=0.1, inline="BB")
+apyEnabledInput = input.bool(true, "APY normalization enabled")
+
+
+// MA Chooser function
+movingAverage(source, length) =>
+    switch smoothingTypeInput
+        "ALMA" => ta.alma(source, length, almaOffsetInput, almaSigmaInput)
+        "EMA" => ta.ema(source, length)
+        "HMA" => ta.ema(source, length)
+        "RMA" => ta.rma(source, length)
+        "SMA" => ta.sma(source, length)
+        "VWMA" => ta.vwma(source, length)
+        "WMA" => ta.wma(source, length)
+        => na
+
+
+// Calculate number of millis until the given date in the future
+futureTime(now, mo, d, h, mi) =>
+    (month(now) * 100 + dayofmonth(now)) < (100 * mo + d) ?
+     timestamp(year(now), 3, 25, 3, 0) :
+     timestamp(year(now) + 1, 3, 25, 3, 0)
+
+
+oneJulianYearInMillis = 31557600000.0 // 365.25 * 24 * 60 * 60 * 1000
+oneJulianYearInHours = oneJulianYearInMillis / 3600000
+apyFactor(now) =>
+    switch tickersInput
+        "0325/USD" => apyEnabledInput ? oneJulianYearInMillis / (futureTime(now, 3, 25, 3, 0) - now) : 1
+        "0325/PERP" => apyEnabledInput ? oneJulianYearInMillis / (futureTime(now, 3, 25, 3, 0) - now) : 1
+        "0624/USD" => apyEnabledInput ? oneJulianYearInMillis / (futureTime(now, 6, 24, 3, 0) - now) : 1
+        "0624/PERP" => apyEnabledInput ? oneJulianYearInMillis / (futureTime(now, 6, 24, 3, 0) - now) : 1
+        "0624/0325" => apyEnabledInput ? oneJulianYearInMillis / (futureTime(now, 6, 24, 3, 0) - futureTime(now, 3, 25, 3, 0)) : 1
+        "PERP/USD" => (apyEnabledInput ? oneJulianYearInHours : 1) / 24
+        => 1.0
+
+// Calculate the fractional premium
+calcPremium(spo, spc, fpo, fpc) =>
+    switch tickerSourceInput
+        "open" => fpo / spo - 1
+        "close" => fpc / spc - 1
+        "oc2" => (fpo / spo + fpc / spc) / 2 - 1
+        "occ3" => (fpo / spo + 2 * fpc / spc) / 3 - 1
+        "occc4" => (fpo / spo + 3 * fpc / spc) / 4 - 1
+        => na
+
+// Setup Tickers
+tickerPrefix = syminfo.prefix + ':' + syminfo.basecurrency
+futureTickerSuffix = str.match(tickersInput, "^\\w+") // BTC/USD => BTC
+futureTicker = tickerPrefix + futureTickerSuffix
+spotTickerSuffix = str.match(tickersInput, "\\w+$") // BTC/USD => USD
+spotTicker = tickerPrefix + str.match(tickersInput, "\\w+$")
+
+// Calculate the price here
+[spo, spc] = request.security(spotTicker, timeframe.period, [open, close])
+[fpo, fpc] = request.security(futureTicker, timeframe.period, [open, close])
+
+// Fractional Premium
+premium = calcPremium(spo, spc, fpo, fpc) * apyFactor(time)
+smoothPremium = movingAverage(premium, smoothingLengthInput)
+
+// BB Bands
+bandDelta = bandsFactorInput * ta.stdev(premium, smoothingLengthInput)
+upperBand = smoothPremium + bandDelta
+lowerBand = smoothPremium - bandDelta
+
+// plot the ratio, with a zero line for reference
+plot(100 * premium, 'Premium', color.new(premium >= 0 ? color.yellow : color.red, 0), style=plot.style_cross)
+p0 = plot(100 * smoothPremium, 'Smooth Premium', color.new(color.blue, 0), style=plot.style_line)
+p1 = plot(100 * lowerBand, 'Lower Band', color.new(color.blue, 0))
+p2 = plot(100 * upperBand, 'Upper Band', color.new(color.blue, 0))
+fill(p0, p2, color=color.new(color.blue, 80))
+fill(p0, p1, color=color.new(color.blue, 80))
