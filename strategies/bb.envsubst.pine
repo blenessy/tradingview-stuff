@@ -73,6 +73,9 @@ isSellOpportunity = sellInput >= upperBand
 isBuyOpportunity = buyInput <= lowerBand
 avgPosPrice = avgOpenPositionPrice()
 
+// set maximum drawdown in percent of maximum equity
+strategy.risk.max_drawdown($RISK_MAX_DRAWDOWN, strategy.percent_of_equity)
+
 // Entry & Exit
 if str.match(tradeTypeInput, "\\blong\\b") == "long"
     isBuyOpportunity := isBuyOpportunity and (na(avgPosPrice) or avgPosPrice >= minPriceImprovementInput * buyInput)
