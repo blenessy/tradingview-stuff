@@ -21,6 +21,8 @@ tradeTypeInput = input.string($TRADE_TYPE, 'Trade Type:', options=['long', 'shor
 tradeSizeInput = input.float($TRADE_SIZE, 'Trade Size:', minval=0.001, maxval=50, step=0.001, inline="qd", group="Trading")
 buyInput = input.source($TRADE_BUY_SOURCE, "Buy Source:", inline="BuySell", group="Trading")
 sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="BuySell", group="Trading")
+minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Price Improvement:', minval=0.01, maxval=2, step=0.01, group="Trading",
+     tooltip="Only buy if new price improves on position price by this factor.")
 
 // MA Chooser function
 movingAverage(source, length) =>
@@ -40,6 +42,14 @@ deviation(source, length) =>
         "STD" => ta.stdev(source, length)
         "MEAN" => ta.dev(source, length) 
         => na
+
+avgOpenPositionPrice() =>
+    vwap = 0.
+    size = 0.
+    for i = 0 to strategy.opentrades-1
+        vwap += strategy.opentrades.entry_price(i) * strategy.opentrades.size(i)
+        size += strategy.opentrades.size(i)
+    strategy.opentrades > 0 ? vwap / size : na
 
 // Get signals
 base = request.security(syminfo.tickerid, timeframeInput, baseInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
@@ -61,11 +71,14 @@ fill(p1, p2, color=color.new(color.teal, 90))
 // Trigger conditions
 isSellOpportunity = sellInput >= upperBand
 isBuyOpportunity = buyInput <= lowerBand
+avgPosPrice = avgOpenPositionPrice()
 
 // Entry & Exit
 if str.match(tradeTypeInput, "\\blong\\b") == "long"
+    isBuyOpportunity := isBuyOpportunity and (na(avgPosPrice) or avgPosPrice >= minPriceImprovementInput * buyInput)
     strategy.entry("buy", strategy.long, when=isBuyOpportunity, qty=tradeSizeInput)
     strategy.close("buy", when=isSellOpportunity)
 if str.match(tradeTypeInput, "\\bshort\\b") == "short"
+    isBuyOpportunity := isBuyOpportunity and (na(avgPosPrice) or avgPosPrice <= minPriceImprovementInput * buyInput)
     strategy.entry("sell", strategy.short, when=isSellOpportunity, qty=tradeSizeInput)
     strategy.close("sell", when=isBuyOpportunity)
