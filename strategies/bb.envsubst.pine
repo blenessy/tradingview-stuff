@@ -24,6 +24,9 @@ sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="BuySell", g
 minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Price Improvement:', minval=0.01, maxval=2, step=0.01, group="Trading",
      tooltip="Only buy if new price improves on position price by this factor.")
 
+if timeframe.period != $CHART_TIMEFRAME
+    runtime.error("expecting chart timeframe: " + $CHART_TIMEFRAME)
+
 // MA Chooser function
 movingAverage(source, length) =>
     switch smoothingTypeInput
