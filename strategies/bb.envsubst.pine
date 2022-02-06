@@ -66,8 +66,8 @@ fill(p1, p2, color=color.new(color.teal, 90))
 // Trigger conditions
 isSellOpportunity = sellInput >= upperBand
 isBuyOpportunity = buyInput <= lowerBand
-okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= minPriceImprovementInput * buyInput
-okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= minPriceImprovementInput * sellInput
+okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= buyInput * minPriceImprovementInput
+okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= sellInput / minPriceImprovementInput
 
 // set maximum drawdown in percent of maximum equity
 strategy.risk.max_drawdown($RISK_MAX_DRAWDOWN, strategy.percent_of_equity)
