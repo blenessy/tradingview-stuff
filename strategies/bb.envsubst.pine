@@ -27,6 +27,9 @@ minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Pr
 if timeframe.period != $CHART_TIMEFRAME
     runtime.error("expecting chart timeframe: " + $CHART_TIMEFRAME)
 
+if syminfo.tickerid != $CHART_TICKERID
+    runtime.error("expecting tickerid: " + $CHART_TICKERID)
+
 // MA Chooser function
 movingAverage(source, length) =>
     switch smoothingTypeInput
