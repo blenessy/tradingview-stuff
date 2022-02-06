@@ -4,8 +4,8 @@ strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMI
 // Smoothing inputs
 smoothingTypeInput = input.string($SMOOTHING_TYPE, 'Method:', options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'ZLEMA', 'HMA'], inline="MA", group="Smoothing")
 smoothingLengthInput = input.int($SMOOTHING_LENGTH, 'Length:', minval=2, inline="MA", group="Smoothing")
-almaOffsetInput = input.float($ALMA_OFFSET, "ALMA offset:", step=0.01, minval=0.0, inline="ALMA", group="Smoothing")
-almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", minval=1, inline="ALMA", group="Smoothing")
+almaOffsetInput = input.float($ALMA_OFFSET, "ALMA offset:", step=0.01, minval=0.01, inline="ALMA", group="Smoothing")
+almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", step=0.1, minval=0.1, inline="ALMA", group="Smoothing")
 
 // Bollinger Bands inputs
 devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN'], inline="BB", group="Bollinger Bands")
