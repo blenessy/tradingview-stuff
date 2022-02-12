@@ -2,19 +2,19 @@
 strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, margin_long=$MARGIN_PERCENT, margin_short=$MARGIN_PERCENT, initial_capital=$INITIAL_CAPITAL, commission_type=$COMMISSION_TYPE, commission_value=$COMMISSION_PERCENT)
 
 // Smoothing inputs
-smoothingTypeInput = input.string($SMOOTHING_TYPE, 'Method:', options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'ZLEMA', 'HMA'], inline="MA", group="Smoothing")
+smoothingTypeInput = input.string($SMOOTHING_TYPE, 'Method:', options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA'], inline="MA", group="Smoothing")
 smoothingLengthInput = input.int($SMOOTHING_LENGTH, 'Length:', minval=2, inline="MA", group="Smoothing")
 almaOffsetInput = input.float($ALMA_OFFSET, "ALMA offset:", step=0.01, minval=0.01, inline="ALMA", group="Smoothing")
 almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", step=0.1, minval=0.1, inline="ALMA", group="Smoothing")
 
 // Bollinger Bands inputs
 devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN'], inline="BB", group="Bollinger Bands")
-multInput = input.float($DEVIATION_MULT, 'Factor:', minval=0.01, maxval=50, step=0.01, inline="BB", group="Bollinger Bands")
-
 timeframeInput = input.timeframe($BB_TIMEFRAME, "Resolution:", group="Bollinger Bands")
-baseInput = input.source($BB_BASE, "Base:", inline="UpperLower", group="Bollinger Bands")
-upperInput = input.source($BB_UPPER, "Upper:", inline="UpperLower", group="Bollinger Bands")
-lowerInput = input.source($BB_LOWER, "Lower:", inline="UpperLower", group="Bollinger Bands")
+baseInput = input.source($BB_BASE, "Base:", inline="Base", group="Bollinger Bands")
+upperInput = input.source($BB_UPPER, "Upper:", inline="Upper", group="Bollinger Bands")
+upperMultInput = input.float($DEVIATION_MULT_UPPER, 'Factor:', minval=0.01, maxval=50, step=0.01, inline="Upper", group="Bollinger Bands")
+lowerInput = input.source($BB_LOWER, "Lower:", inline="Lower", group="Bollinger Bands")
+lowerMultInput = input.float($DEVIATION_MULT_LOWER, 'Factor:', minval=0.01, maxval=50, step=0.01, inline="Lower", group="Bollinger Bands")
 
 // Trade Inputs
 tradeTypeInput = input.string($TRADE_TYPE, 'Trade Type:', options=['long', 'short', 'long+short'], inline="qd", group="Trading")
@@ -56,8 +56,8 @@ lower = request.security(syminfo.tickerid, timeframeInput, lowerInput, $BARMERGE
 
 // Parts of the BB
 basis = movingAverage(base, smoothingLengthInput)
-upperBand = movingAverage(upper, smoothingLengthInput) + multInput * deviation(upper, smoothingLengthInput)
-lowerBand = movingAverage(lower, smoothingLengthInput) - multInput * deviation(lower, smoothingLengthInput)
+upperBand = movingAverage(upper, smoothingLengthInput) + upperMultInput * deviation(upper, smoothingLengthInput)
+lowerBand = movingAverage(lower, smoothingLengthInput) - lowerMultInput * deviation(lower, smoothingLengthInput)
 
 // Plotting
 tealLine = color.new(color.teal, 40)
