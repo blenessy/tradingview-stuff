@@ -78,7 +78,9 @@ strategy.risk.max_drawdown($RISK_MAX_DRAWDOWN, strategy.percent_of_equity)
 // Entry & Exit
 if str.match(tradeTypeInput, "\\blong\\b") == "long"
     strategy.entry("buy", strategy.long, when=isBuyOpportunity and okOpenLong, qty=tradeSizeInput)
-    strategy.close("buy", when=isSellOpportunity)
 if str.match(tradeTypeInput, "\\bshort\\b") == "short"
     strategy.entry("sell", strategy.short, when=isSellOpportunity and okOpenShort, qty=tradeSizeInput)
+if str.match(tradeTypeInput, "\\blong\\b") == "long"
+    strategy.close("buy", when=isSellOpportunity)
+if str.match(tradeTypeInput, "\\bshort\\b") == "short"
     strategy.close("sell", when=isBuyOpportunity)
