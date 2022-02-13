@@ -8,21 +8,23 @@ almaOffsetInput = input.float($ALMA_OFFSET, "ALMA offset:", step=0.01, minval=0.
 almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", step=0.1, minval=0.1, inline="ALMA", group="Smoothing")
 
 // Bollinger Bands inputs
-devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN'], inline="BB", group="Bollinger Bands")
 timeframeInput = input.timeframe($BB_TIMEFRAME, "Resolution:", group="Bollinger Bands")
-baseInput = input.source($BB_BASE, "Base:", inline="Base", group="Bollinger Bands")
+devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN', 'ATR'], group="Bollinger Bands")
 upperInput = input.source($BB_UPPER, "Upper:", inline="Upper", group="Bollinger Bands")
 upperMultInput = input.float($DEVIATION_MULT_UPPER, 'Factor:', minval=0.01, maxval=50, step=0.01, inline="Upper", group="Bollinger Bands")
 lowerInput = input.source($BB_LOWER, "Lower:", inline="Lower", group="Bollinger Bands")
 lowerMultInput = input.float($DEVIATION_MULT_LOWER, 'Factor:', minval=0.01, maxval=50, step=0.01, inline="Lower", group="Bollinger Bands")
+baseInput = input.source($BB_BASE, "Middle:", inline="Base", group="Bollinger Bands", tooltip="Only cosmetical value")
 
 // Trade Inputs
 tradeTypeInput = input.string($TRADE_TYPE, 'Trade Type:', options=['long', 'short', 'long+short'], inline="qd", group="Trading")
 tradeSizeInput = input.float($TRADE_SIZE, 'Trade Size:', minval=0.001, maxval=50, step=0.001, inline="qd", group="Trading")
-buyInput = input.source($TRADE_BUY_SOURCE, "Buy Source:", inline="BuySell", group="Trading")
-sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="BuySell", group="Trading")
-minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Price Improvement:', minval=0.01, maxval=2, step=0.01, group="Trading",
-     tooltip="Only buy if new price improves on position price by this factor.")
+buyInput = input.source($TRADE_BUY_SOURCE, "Buy Source:", inline="Buy", group="Trading")
+buyVWAPInput = input.bool($TRADE_BUY_VWAP, "VWAP", inline="Buy", group="Trading")
+sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="Sell", group="Trading")
+sellVWAPInput = input.bool($TRADE_SELL_VWAP, "VWAP", inline="Sell", group="Trading")
+minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Price Improvement:', minval=0.01, maxval=2, step=0.01,
+     inline="MPI", group="Trading", tooltip="Only buy if new price improves on position price by this factor.")
 
 if timeframe.period != $CHART_TIMEFRAME
     runtime.error("expecting chart timeframe: " + $CHART_TIMEFRAME)
@@ -46,7 +48,8 @@ movingAverage(source, length) =>
 deviation(source, length) =>
     switch devTypeInput
         "STD" => ta.stdev(source, length)
-        "MEAN" => ta.dev(source, length) 
+        "MEAN" => ta.dev(source, length)
+        "ATR" => ta.atr(length)
         => na
 
 // Get signals
@@ -59,6 +62,10 @@ basis = movingAverage(base, smoothingLengthInput)
 upperBand = movingAverage(upper, smoothingLengthInput) + upperMultInput * deviation(upper, smoothingLengthInput)
 lowerBand = movingAverage(lower, smoothingLengthInput) - lowerMultInput * deviation(lower, smoothingLengthInput)
 
+// Sort out the buy / sell signals
+buy = buyVWAPInput ? ta.vwap(buyInput) : buyInput
+sell = sellVWAPInput ? ta.vwap(sellInput) : sellInput
+
 // Plotting
 tealLine = color.new(color.teal, 40)
 plot(basis, 'Basis', color=tealLine, linewidth=2)
@@ -67,10 +74,10 @@ p2 = plot(lowerBand, 'Lower', color=tealLine, linewidth=1)
 fill(p1, p2, color=color.new(color.teal, 90))
 
 // Trigger conditions
-isSellOpportunity = sellInput >= upperBand
-isBuyOpportunity = buyInput <= lowerBand
-okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= buyInput * minPriceImprovementInput
-okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= sellInput / minPriceImprovementInput
+isSellOpportunity = sell >= upperBand
+isBuyOpportunity = buy <= lowerBand
+okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= buy * minPriceImprovementInput
+okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= sell / minPriceImprovementInput
 
 // set maximum drawdown in percent of maximum equity
 strategy.risk.max_drawdown($RISK_MAX_DRAWDOWN, strategy.percent_of_equity)
