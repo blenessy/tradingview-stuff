@@ -67,11 +67,16 @@ buy = buyVWAPInput ? ta.vwap(buyInput) : buyInput
 sell = sellVWAPInput ? ta.vwap(sellInput) : sellInput
 
 // Plotting
-tealLine = color.new(color.teal, 40)
-plot(basis, 'Basis', color=tealLine, linewidth=2)
-p1 = plot(upperBand, 'Upper', color=tealLine, linewidth=1)
-p2 = plot(lowerBand, 'Lower', color=tealLine, linewidth=1)
-fill(p1, p2, color=color.new(color.teal, 90))
+bbLine = (last_bar_index - bar_index) < smoothingLengthInput ? color.new(color.white, 0) : color.new(color.gray, 30)
+bbFill = (last_bar_index - bar_index) < smoothingLengthInput ? color.new(color.white, 90) : color.new(color.gray, 95)
+tradeFill = color.new(color.fuchsia, 75)
+plot(basis, 'BB Middle', color=bar_index % 2 == 1 ? bbLine : na, linewidth=1)
+p1 = plot(upperBand, 'BB Upper', color=bbLine, linewidth=1)
+p2 = plot(lowerBand, 'BB Lower', color=bbLine, linewidth=1)
+fill(p1, p2, color=bbFill)
+p3 = plot(buy, 'Buy', color=tradeFill, linewidth=1)
+p4 = plot(sell, 'Sell', color=tradeFill, linewidth=1)
+fill(p3, p4, color=tradeFill)
 
 // Trigger conditions
 isSellOpportunity = sell >= upperBand
