@@ -74,7 +74,7 @@ sell = sellVWAPInput ? ta.vwap(sellInput) : sellInput
 // Plotting
 bbFill = (last_bar_index - bar_index) < smoothingLengthInput ? color.new(color.white, 95) : color.new(color.gray, 95)
 tradeFill = color.new(color.teal, 50)
-plot(basis, 'BB Middle', color=bar_index % 2 == 1 ? color.new(color.gray, 0) : na, linewidth=1)
+plot(basis, 'BB Middle', color=color.new(color.white, 30), linewidth=0, style=plot.style_circles)
 p1 = plot(upperBand, 'BB Upper', color=color.new(color.white, 0), linewidth=1)
 p2 = plot(lowerBand, 'BB Lower', color=color.new(color.white, 0), linewidth=1)
 fill(p1, p2, color=bbFill)
