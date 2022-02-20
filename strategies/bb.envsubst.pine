@@ -18,7 +18,7 @@ baseInput = input.source($BB_BASE, "Middle:", inline="Base", group="Bollinger Ba
 
 // Trade Inputs
 tradeTypeInput = input.string($TRADE_TYPE, 'Trade Type:', options=['long', 'short', 'long+short'], inline="qd", group="Trading")
-tradeSizeInput = input.float($TRADE_SIZE, 'Trade Size:', minval=0.001, maxval=50, step=0.001, inline="qd", group="Trading")
+tradeSizeInput = input.float($TRADE_SIZE, 'Trade Size:', minval=0.001, step=0.001, inline="qd", group="Trading")
 buyInput = input.source($TRADE_BUY_SOURCE, "Buy Source:", inline="Buy", group="Trading")
 buyVWAPInput = input.bool($TRADE_BUY_VWAP, "VWAP", inline="Buy", group="Trading")
 sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="Sell", group="Trading")
@@ -26,10 +26,13 @@ sellVWAPInput = input.bool($TRADE_SELL_VWAP, "VWAP", inline="Sell", group="Tradi
 minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Price Improvement:', minval=0.01, maxval=2, step=0.01,
      inline="MPI", group="Trading", tooltip="Only buy if new price improves on position price by this factor.")
 
-if timeframe.period != $CHART_TIMEFRAME
+// Development related
+lockedInput = input.bool($DEVELOPMENT_LOCKED, "Lock Ticker and Timeframe", inline="Lock", group="Development")
+
+if lockedInput and timeframe.period != $CHART_TIMEFRAME
     runtime.error("expecting chart timeframe: " + $CHART_TIMEFRAME)
 
-if syminfo.tickerid != $CHART_TICKERID
+if lockedInput and syminfo.tickerid != $CHART_TICKERID
     runtime.error("expecting tickerid: " + $CHART_TICKERID)
 
 // MA Chooser function
@@ -69,7 +72,7 @@ sell = sellVWAPInput ? ta.vwap(sellInput) : sellInput
 // Plotting
 bbLine = (last_bar_index - bar_index) < smoothingLengthInput ? color.new(color.white, 0) : color.new(color.gray, 30)
 bbFill = (last_bar_index - bar_index) < smoothingLengthInput ? color.new(color.white, 90) : color.new(color.gray, 95)
-tradeFill = color.new(color.fuchsia, 75)
+tradeFill = color.new(color.white, 30)
 plot(basis, 'BB Middle', color=bar_index % 2 == 1 ? bbLine : na, linewidth=1)
 p1 = plot(upperBand, 'BB Upper', color=bbLine, linewidth=1)
 p2 = plot(lowerBand, 'BB Lower', color=bbLine, linewidth=1)
@@ -89,10 +92,10 @@ strategy.risk.max_drawdown($RISK_MAX_DRAWDOWN, strategy.percent_of_equity)
 
 // Entry & Exit
 if str.match(tradeTypeInput, "\\blong\\b") == "long"
-    strategy.entry("buy", strategy.long, when=isBuyOpportunity and okOpenLong, qty=tradeSizeInput)
-if str.match(tradeTypeInput, "\\bshort\\b") == "short"
-    strategy.entry("sell", strategy.short, when=isSellOpportunity and okOpenShort, qty=tradeSizeInput)
-if str.match(tradeTypeInput, "\\blong\\b") == "long"
     strategy.close("buy", when=isSellOpportunity)
 if str.match(tradeTypeInput, "\\bshort\\b") == "short"
     strategy.close("sell", when=isBuyOpportunity)
+if str.match(tradeTypeInput, "\\blong\\b") == "long"
+    strategy.entry("buy", strategy.long, when=isBuyOpportunity and okOpenLong, qty=tradeSizeInput)
+if str.match(tradeTypeInput, "\\bshort\\b") == "short"
+    strategy.entry("sell", strategy.short, when=isSellOpportunity and okOpenShort, qty=tradeSizeInput)
