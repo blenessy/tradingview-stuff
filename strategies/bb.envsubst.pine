@@ -83,16 +83,16 @@ p4 = plot(sell, 'Sell', color=tradeFill, linewidth=1)
 fill(p3, p4, color=tradeFill)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
-isBuyEvent = buyOffsetInput >= 0 ? ta.crossunder(buy, lowerBand) : ta.crossover(buy, lowerBand)
-isSellEvent = sellOffsetInput >= 0 ? ta.crossover(sell, upperBand) : ta.crossunder(sell, upperBand)
+isBuyEvent = buyOffsetInput >= 0 ? buy < lowerBand : buy > lowerBand
+isSellEvent = sellOffsetInput >= 0 ? sell > upperBand : sell < upperBand
 
 // Filter out bad trades
 shouldBuy = isBuyEvent and (buyOffsetInput >= 0 ? lowerBand / buy - 1 : buy / lowerBand - 1) > math.abs(buyOffsetInput)
 shouldSell = isSellEvent and (sellOffsetInput >= 0 ? sell / upperBand - 1 : upperBand / sell - 1) > math.abs(sellOffsetInput)
 
 // Make sure consecutive buys/sells improve the average position price
-okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= buy * minPriceImprovementInput
-okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= sell / minPriceImprovementInput
+okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (buy * minPriceImprovementInput)
+okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= (sell / minPriceImprovementInput)
 
 // Set maximum drawdown in percent of maximum equity
 strategy.risk.max_drawdown($RISK_MAX_DRAWDOWN, strategy.percent_of_equity)
