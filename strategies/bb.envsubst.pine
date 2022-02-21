@@ -18,12 +18,12 @@ baseInput = input.source($BB_BASE, "Middle:", inline="Base", group="Bollinger Ba
 
 // Trade Inputs
 tradeTypeInput = input.string($TRADE_TYPE, 'Trade Type:', options=['long', 'short', 'long+short'], inline="qd", group="Trading")
-tradeSizeInput = input.float($TRADE_SIZE, 'TSize:', minval=0.001, step=0.001, inline="qd", group="Trading")
+tradeSizeInput = input.float($TRADE_SIZE, 'Size:', minval=0.001, step=0.001, inline="qd", group="Trading")
 buyInput = input.source($TRADE_BUY_SOURCE, "Buy Source:", inline="Buy", group="Trading")
-buyOffsetInput = input.float($TRADE_BUY_OFFSET, 'Offset:', step=0.0001, inline="Buy", group="Trading")
+buyStrategyInput = input.string($TRADE_BUY_STRATEGY, 'Strategy:', options=["x-over", 'x-under', '>', '<'], inline="Buy", group="Trading")
 buyVWAPInput = input.bool($TRADE_BUY_VWAP, "VWAP", inline="Buy", group="Trading")
 sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="Sell", group="Trading")
-sellOffsetInput = input.float($TRADE_SELL_OFFSET, 'Offset:', step=0.0001, inline="Sell", group="Trading")
+sellStrategyInput = input.string($TRADE_SELL_STRATEGY, 'Strategy:', options=["x-over", 'x-under', '>', '<'], inline="Sell", group="Trading")
 sellVWAPInput = input.bool($TRADE_SELL_VWAP, "VWAP", inline="Sell", group="Trading")
 minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Price Improvement:', minval=0.01, maxval=2, step=0.01,
      inline="MPI", group="Trading", tooltip="Only buy if new price improves on position price by this factor.")
@@ -57,6 +57,14 @@ deviation(source, length) =>
         "ATR" => ta.atr(length)
         => na
 
+compare(method, source1, source2) =>
+    switch method
+        ">" => source1 > source2
+        "<" => source1 < source2
+        "x-over" => ta.crossover(source1, source2)
+        "x-under" => ta.crossunder(source1, source2)
+        => na
+
 // Get signals
 base = request.security(syminfo.tickerid, timeframeInput, baseInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
 upper = request.security(syminfo.tickerid, timeframeInput, upperInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
@@ -83,12 +91,8 @@ p4 = plot(sell, 'Sell', color=tradeFill, linewidth=1)
 fill(p3, p4, color=tradeFill)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
-isBuyEvent = buyOffsetInput >= 0 ? buy < lowerBand : buy > lowerBand
-isSellEvent = sellOffsetInput >= 0 ? sell > upperBand : sell < upperBand
-
-// Filter out bad trades
-shouldBuy = isBuyEvent and (buyOffsetInput >= 0 ? lowerBand / buy - 1 : buy / lowerBand - 1) > math.abs(buyOffsetInput)
-shouldSell = isSellEvent and (sellOffsetInput >= 0 ? sell / upperBand - 1 : upperBand / sell - 1) > math.abs(sellOffsetInput)
+shouldBuy = compare(buyStrategyInput, buy, lowerBand)
+shouldSell = compare(sellStrategyInput, sell, upperBand)
 
 // Make sure consecutive buys/sells improve the average position price
 okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (buy * minPriceImprovementInput)
