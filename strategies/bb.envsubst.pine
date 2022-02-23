@@ -99,7 +99,7 @@ okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (
 okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= (sell / minPriceImprovementInput)
 
 // Set maximum drawdown in percent of maximum equity
-strategy.risk.max_drawdown($RISK_MAX_DRAWDOWN, strategy.percent_of_equity)
+strategy.risk.max_drawdown(lockedInput ? $RISK_MAX_DRAWDOWN : 100, strategy.percent_of_equity)
 
 // Entry & Exit
 if str.match(tradeTypeInput, "\\blong\\b") == "long"
