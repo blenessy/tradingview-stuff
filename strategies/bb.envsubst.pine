@@ -29,8 +29,7 @@ minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Pr
      inline="MPI", group="Trading", tooltip="Only buy if new price improves on position price by this factor.")
 
 // Development related
-backtestMonthsInput = input.float($DEVELOPMENT_BACKTEST_MONTHS, "Backtest months:", minval=1, tooltip="limited by your subscription", group="Development")
-startTime = math.ceil(last_bar_time - (backtestMonthsInput * 2592000000))
+backtestStartInput = input.time(timestamp($DEVELOPMENT_BACKTEST_START), "Backtest start:", tooltip="limited by your subscription", group="Development")
 lockedInput = input.bool($DEVELOPMENT_LOCKED, "Lock Ticker and Timeframe", inline="Lock", group="Development")
 
 if lockedInput and timeframe.period != $CHART_TIMEFRAME
@@ -109,6 +108,6 @@ if str.match(tradeTypeInput, "\\blong\\b") == "long"
 if str.match(tradeTypeInput, "\\bshort\\b") == "short"
     strategy.close("sell", when=shouldBuy)
 if str.match(tradeTypeInput, "\\blong\\b") == "long"
-    strategy.entry("buy", strategy.long, when=shouldBuy and okOpenLong and time > startTime, qty=tradeSizeInput)
+    strategy.entry("buy", strategy.long, when=shouldBuy and okOpenLong and time > backtestStartInput, qty=tradeSizeInput)
 if str.match(tradeTypeInput, "\\bshort\\b") == "short"
-    strategy.entry("sell", strategy.short, when=shouldSell and okOpenShort and time > startTime, qty=tradeSizeInput)
+    strategy.entry("sell", strategy.short, when=shouldSell and okOpenShort and time > backtestStartInput, qty=tradeSizeInput)
