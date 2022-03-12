@@ -27,7 +27,7 @@ make pine
 To generate a concrete pine script, which you can use in TradingView:
 
 ```shell
-make STRATEGY=bb ENV=defaults/bb.env pine
+make ENV=example/ema.env pine
 ```
 
 # What is [FTX](https://ftx.com/)?

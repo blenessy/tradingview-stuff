@@ -1,5 +1,5 @@
 STRATEGY=bb
-ENV=defaults/$(STRATEGY).env
+ENV=example/ema.env
 
 include $(ENV)
 export

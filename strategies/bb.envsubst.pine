@@ -11,9 +11,9 @@ almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", step=0.1, minval=0.1, inline
 timeframeInput = input.timeframe($BB_TIMEFRAME, "Resolution:", group="Bollinger Bands")
 devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN', 'ATR'], group="Bollinger Bands")
 upperInput = input.source($BB_UPPER, "Upper:", inline="Upper", group="Bollinger Bands")
-upperMultInput = input.float($DEVIATION_MULT_UPPER, 'Factor:', minval=0.01, maxval=50, step=0.1, inline="Upper", group="Bollinger Bands")
+upperMultInput = input.float($DEVIATION_MULT_UPPER, 'Factor:', minval=0.01, maxval=50, step=0.05, inline="Upper", group="Bollinger Bands")
 lowerInput = input.source($BB_LOWER, "Lower:", inline="Lower", group="Bollinger Bands")
-lowerMultInput = input.float($DEVIATION_MULT_LOWER, 'Factor:', minval=0.01, maxval=50, step=0.1, inline="Lower", group="Bollinger Bands")
+lowerMultInput = input.float($DEVIATION_MULT_LOWER, 'Factor:', minval=0.01, maxval=50, step=0.05, inline="Lower", group="Bollinger Bands")
 baseInput = input.source($BB_BASE, "Middle:", inline="Base", group="Bollinger Bands", tooltip="Only cosmetical value")
 
 // Trade Inputs
