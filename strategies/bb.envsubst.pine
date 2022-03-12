@@ -2,10 +2,12 @@
 strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, margin_long=$MARGIN_PERCENT, margin_short=$MARGIN_PERCENT, initial_capital=$INITIAL_CAPITAL, commission_type=$COMMISSION_TYPE, commission_value=$COMMISSION_PERCENT)
 
 // Smoothing inputs
-smoothingTypeInput = input.string($SMOOTHING_TYPE, 'Method:', options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA'], inline="MA", group="Smoothing")
-smoothingLengthInput = input.int($SMOOTHING_LENGTH, 'Length:', minval=2, inline="MA", group="Smoothing")
+smoothingTypeInput = input.string($SMOOTHING_TYPE, 'Method:', options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'], inline="MA", group="Smoothing")
+smoothingLengthInput = input.int($SMOOTHING_LENGTH, 'Length:', minval=3, inline="MA", group="Smoothing")
 almaOffsetInput = input.float($ALMA_OFFSET, "ALMA offset:", step=0.01, minval=0.01, inline="ALMA", group="Smoothing")
 almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", step=0.1, minval=0.1, inline="ALMA", group="Smoothing")
+vamaShortLengthInput = input.int($VAMA_SHORT_LENGTH, "VAMA short length:", minval=2, inline="VAMA", group="Smoothing")
+vamaScaleInput = input.float($VAMA_SCALE_FACTOR, "Scale:", step=0.01, minval=0.01, inline="VAMA", group="Smoothing")
 
 // Bollinger Bands inputs
 timeframeInput = input.timeframe($BB_TIMEFRAME, "Resolution:", group="Bollinger Bands")
@@ -38,6 +40,13 @@ if lockedInput and timeframe.period != $CHART_TIMEFRAME
 if lockedInput and syminfo.tickerid != $CHART_TICKERID
     runtime.error("expecting tickerid: " + $CHART_TICKERID)
 
+// https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
+vama(source, length, shortLength, scale) =>
+    safeShortLen = length > shortLength ? shortLength : length - 1
+    alpha = ta.stdev(source, safeShortLen) / ta.stdev(source, length) * scale
+    float ma = na
+    ma := barstate.isfirst ? source : alpha * source + (1 - alpha) * nz(ma[1])
+
 // MA Chooser function
 movingAverage(source, length) =>
     switch smoothingTypeInput
@@ -48,6 +57,7 @@ movingAverage(source, length) =>
         "SMA" => ta.sma(source, length)
         "VWMA" => ta.vwma(source, length)
         "WMA" => ta.wma(source, length)
+        "VAMA" => vama(source, length, vamaShortLengthInput, vamaScaleInput)
         => na
 
 // Deviation chooser function
