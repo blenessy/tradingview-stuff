@@ -11,7 +11,8 @@ vamaScaleInput = input.float($VAMA_SCALE_FACTOR, "Scale:", step=0.01, minval=0.0
 
 // Bollinger Bands inputs
 timeframeInput = input.timeframe($BB_TIMEFRAME, "Resolution:", group="Bollinger Bands")
-devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN', 'ATR'], group="Bollinger Bands")
+devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN', 'ATR'], inline="Dev", group="Bollinger Bands")
+devLengthInput = input.int($DEVIATION_LENGTH, 'Length:', minval=3, inline="Dev", group="Bollinger Bands")
 upperInput = input.source($BB_UPPER, "Upper:", inline="Upper", group="Bollinger Bands")
 upperMultInput = input.float($DEVIATION_MULT_UPPER, 'Factor:', minval=0.01, maxval=50, step=0.05, inline="Upper", group="Bollinger Bands")
 lowerInput = input.source($BB_LOWER, "Lower:", inline="Lower", group="Bollinger Bands")
