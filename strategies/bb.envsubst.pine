@@ -84,8 +84,8 @@ lower = request.security(syminfo.tickerid, timeframeInput, lowerInput, $BARMERGE
 
 // Parts of the BB
 basis = movingAverage(base, smoothingLengthInput)
-upperBand = movingAverage(upper, smoothingLengthInput) + upperMultInput * deviation(upper, smoothingLengthInput)
-lowerBand = movingAverage(lower, smoothingLengthInput) - lowerMultInput * deviation(lower, smoothingLengthInput)
+upperBand = movingAverage(upper, smoothingLengthInput) + upperMultInput * deviation(upper, devLengthInput)
+lowerBand = movingAverage(lower, smoothingLengthInput) - lowerMultInput * deviation(lower, devLengthInput)
 
 // Sort out the buy / sell signals
 buy = buyVWAPInput ? ta.vwap(buyInput) : buyInput
