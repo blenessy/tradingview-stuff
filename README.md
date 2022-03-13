@@ -34,3 +34,9 @@ make ENV=example/ema.env pine
 
 My favorite crypto trading platform.
 Want to try? Use my [referral](https://ftx.com/profile#a=tradingviewstuff) to get a 5% discount whe u sign up.
+
+# Roadmap
+
+- [x] 0.1.0: Symmetric Bot: some buy/sell config same (e.g. choice of MA)
+- [ ] 0.2.0: Fully Asymetric Bot: buy/sell config completely unrelated
+- [ ] 0.2.0: Improved UX: Rework and document the Inputs
