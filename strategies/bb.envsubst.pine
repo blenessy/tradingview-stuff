@@ -1,124 +1,126 @@
 //@version=5
-strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, margin_long=$MARGIN_PERCENT, margin_short=$MARGIN_PERCENT, initial_capital=$INITIAL_CAPITAL, commission_type=$COMMISSION_TYPE, commission_value=$COMMISSION_PERCENT)
+strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT)
 
-// Smoothing inputs
-smoothingTypeInput = input.string($SMOOTHING_TYPE, 'Method:', options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'], inline="MA", group="Smoothing")
-smoothingLengthInput = input.int($SMOOTHING_LENGTH, 'Length:', minval=3, inline="MA", group="Smoothing")
-almaOffsetInput = input.float($ALMA_OFFSET, "ALMA offset:", step=0.01, minval=0.01, inline="ALMA", group="Smoothing")
-almaSigmaInput = input.float($ALMA_SIGMA, "Sigma:", step=0.1, minval=0.1, inline="ALMA", group="Smoothing")
-vamaShortLengthInput = input.int($VAMA_SHORT_LENGTH, "VAMA short length:", minval=2, inline="VAMA", group="Smoothing")
-vamaScaleInput = input.float($VAMA_SCALE_FACTOR, "Scale:", step=0.01, minval=0.01, inline="VAMA", group="Smoothing")
+// Group names
+lbgrp = "Low Band - Buy"
+hbgrp = "High Band - Sell"
 
-// Bollinger Bands inputs
-timeframeInput = input.timeframe($BB_TIMEFRAME, "Resolution:", group="Bollinger Bands")
-devTypeInput = input.string($DEVIATION_TYPE, 'Deviation:', options=['STD', 'MEAN', 'ATR'], inline="Dev", group="Bollinger Bands")
-devLengthInput = input.int($DEVIATION_LENGTH, 'Length:', minval=3, inline="Dev", group="Bollinger Bands")
-upperInput = input.source($BB_UPPER, "Upper:", inline="Upper", group="Bollinger Bands")
-upperMultInput = input.float($DEVIATION_MULT_UPPER, 'Factor:', minval=0.01, maxval=50, step=0.05, inline="Upper", group="Bollinger Bands")
-lowerInput = input.source($BB_LOWER, "Lower:", inline="Lower", group="Bollinger Bands")
-lowerMultInput = input.float($DEVIATION_MULT_LOWER, 'Factor:', minval=0.01, maxval=50, step=0.05, inline="Lower", group="Bollinger Bands")
-baseInput = input.source($BB_BASE, "Middle:", inline="Base", group="Bollinger Bands", tooltip="Only cosmetical value")
-
-// Trade Inputs
-tradeTypeInput = input.string($TRADE_TYPE, 'Trade Type:', options=['long', 'short', 'long+short'], inline="qd", group="Trading")
-tradeSizeInput = input.float($TRADE_SIZE, 'Size:', minval=0.001, step=0.001, inline="qd", group="Trading")
-buyInput = input.source($TRADE_BUY_SOURCE, "Buy Source:", inline="Buy", group="Trading")
-buyStrategyInput = input.string($TRADE_BUY_STRATEGY, 'Strategy:', options=["x-over", 'x-under', '>', '<'], inline="Buy", group="Trading")
-buyVWAPInput = input.bool($TRADE_BUY_VWAP, "VWAP", inline="Buy", group="Trading")
-sellInput = input.source($TRADE_SELL_SOURCE, "Sell Source:", inline="Sell", group="Trading")
-sellStrategyInput = input.string($TRADE_SELL_STRATEGY, 'Strategy:', options=["x-over", 'x-under', '>', '<'], inline="Sell", group="Trading")
-sellVWAPInput = input.bool($TRADE_SELL_VWAP, "VWAP", inline="Sell", group="Trading")
-minPriceImprovementInput = input.float($TRADE_MIN_PRICE_IMPROVEMENT, 'Minimal Price Improvement:', minval=0.01, maxval=2, step=0.01,
-     inline="MPI", group="Trading", tooltip="Only buy if new price improves on position price by this factor.")
-
-// Development related
-backtestStartInput = input.time(timestamp($DEVELOPMENT_BACKTEST_START), "Backtest start:", tooltip="limited by your subscription", group="Development")
-lockedInput = input.bool($DEVELOPMENT_LOCKED, "Lock Ticker and Timeframe", inline="Lock", group="Development")
-
-if lockedInput and timeframe.period != $CHART_TIMEFRAME
+// General Inputs
+devMode = input.bool($DEV_MODE, "Development mode")
+if not devMode and timeframe.period != $CHART_TIMEFRAME
     runtime.error("expecting chart timeframe: " + $CHART_TIMEFRAME)
-
-if lockedInput and syminfo.tickerid != $CHART_TICKERID
+if not devMode and syminfo.tickerid != $CHART_TICKERID
     runtime.error("expecting tickerid: " + $CHART_TICKERID)
+backtestStart = input.time(timestamp($BACKTEST_START), "Backtest start")
+
+// BB Low configuration
+lbMAType = input.string($LB_MA_TYPE, 'Moving average  ', inline='lbma1', group=lbgrp,
+     options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+lbMALen = input.int($LB_MA_LENGTH, 'MA length       ', minval=3, inline='lbma1', group=lbgrp)
+lbMASource = input.source($LB_MA_SOURCE, "MA source       ", group=lbgrp)
+
+lbAlmaOffset = input.float($LB_ALMA_OFFSET, "ALMA offset     ", step=.01, minval=.01, inline='lbalma', group=lbgrp)
+lbAlmaSigma = input.float($LB_ALMA_SIGMA, "ALMA sigma      ", step=.1, minval=.1, inline='lbalma', group=lbgrp)
+
+lbVamaFastLen = input.int($LB_VAMA_FAST_LENGTH, "VAMA fast length", minval=2, inline='lbvama', group=lbgrp)
+lbVamaWeight = input.float($LB_VAMA_WEIGHT, "VAMA weight      ", step=.01, minval=.01, inline='lbvama', group=lbgrp)
+
+lbDevType = input.string($LB_DEV_TYPE, 'Deviation       ', options=['STD', 'MEAN'], inline="lbdev1", group=lbgrp)
+lbDevLen = input.int($LB_DEV_LENGTH, 'Dev. length      ', minval=3, inline="lbdev1", group=lbgrp)
+lbDevSource = input.source($LB_DEV_SOURCE, "Dev. source     ", inline="lbdev2", group=lbgrp)
+lbDevScale =  input.float($LB_DEV_SCALE, 'Dev. scale factor  ', minval=.01, maxval=50, step=.05, inline="lbdev2", group=lbgrp)
+
+lbLongSource = input.source($LB_LONG_SOURCE, "Buy source     ", inline='long1', group=lbgrp)
+lbLongStrategy = input.string($LB_LONG_STRATEGY, 'Strategy          ', inline='long1', group=lbgrp,
+     options=['Price x-over MA', 'Price x-under MA', 'Price < MA'])
+lbLongSize = input.float($LB_LONG_SIZE, 'Order size      ', minval=0, step=.001, inline='long2', group=lbgrp)
+lbRebuyResistance = input.float($LB_LONG_REBUY_RESISTANCE, 'Rebuy resistance  ', minval=.01, step=.01, inline='long2', group=lbgrp)
+
+// BB High configuration
+hbMAType = input.string($HB_MA_TYPE, 'Moving average  ', inline='hbma1', group=hbgrp,
+     options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+hbMALen = input.int($HB_MA_LENGTH, 'MA length       ', minval=3, inline='hbma1', group=hbgrp)
+hbMASource = input.source($HB_MA_SOURCE, "MA source       ", group=hbgrp)
+
+hbAlmaOffset = input.float($HB_ALMA_OFFSET, "ALMA offset     ", step=.01, minval=.01, inline='hbalma', group=hbgrp)
+hbAlmaSigma = input.float($HB_ALMA_SIGMA, "ALMA sigma      ", step=.1, minval=.1, inline='hbalma', group=hbgrp)
+
+hbVamaFastLen = input.int($HB_VAMA_FAST_LENGTH, "VAMA fast length", minval=2, inline='hbvama', group=hbgrp)
+hbVamaWeight = input.float($HB_VAMA_WEIGHT, "VAMA weight      ", step=.01, minval=.01, inline='hbvama', group=hbgrp)
+
+hbDevType = input.string($HB_DEV_TYPE, 'Deviation       ', options=['STD', 'MEAN'], inline="hbdev1", group=hbgrp)
+hbDevLen = input.int($HB_DEV_LENGTH, 'Dev. length      ', minval=3, inline="hbdev1", group=hbgrp)
+hbDevSource = input.source($HB_DEV_SOURCE, "Dev. source     ", inline="hbdev2", group=hbgrp)
+hbDevScale =  input.float($HB_DEV_SCALE, 'Dev. scale factor  ', minval=.01, maxval=50, step=.05, inline="hbdev2", group=hbgrp)
+
+hbShortSource = input.source($HB_SHORT_SOURCE, "Sell source     ", inline='short1', group=hbgrp)
+hbShortStrategy = input.string($HB_SHORT_STRATEGY, 'Strategy          ', inline='short1', group=hbgrp,
+     options=['Price x-over MA', 'Price x-under MA', 'Price > MA'])
+
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
-vama(source, length, shortLength, scale) =>
-    safeShortLen = length > shortLength ? shortLength : length - 1
-    alpha = ta.stdev(source, safeShortLen) / ta.stdev(source, length) * scale
-    float ma = na
-    ma := barstate.isfirst ? source : alpha * source + (1 - alpha) * nz(ma[1])
+vama(src, dev1Len, dev2Len, scale) =>
+    longStdDev = ta.stdev(src, dev2Len >= dev1Len ? dev2Len : dev1Len)
+    shortStdDev = ta.stdev(src, dev2Len >= dev1Len ? dev1Len : dev2Len)
+    alpha = shortStdDev / longStdDev * scale
+    ma = float(na)
+    ma := alpha * src + (1 - alpha) * nz(ma[1])
 
-// MA Chooser function
-movingAverage(source, length) =>
-    switch smoothingTypeInput
-        "ALMA" => ta.alma(source, length, almaOffsetInput, almaSigmaInput)
-        "EMA" => ta.ema(source, length)
-        "HMA" => ta.ema(source, length)
-        "RMA" => ta.rma(source, length)
-        "SMA" => ta.sma(source, length)
-        "VWMA" => ta.vwma(source, length)
-        "WMA" => ta.wma(source, length)
-        "VAMA" => vama(source, length, vamaShortLengthInput, vamaScaleInput)
-        => na
+movingAverage(type, src, length) =>
+    switch type
+        "EMA" => ta.ema(src, length)
+        "HMA" => ta.ema(src, length)
+        "RMA" => ta.rma(src, length)
+        "SMA" => ta.sma(src, length)
+        "VWMA" => ta.vwma(src, length)
+        "WMA" => ta.wma(src, length)
+        => float(na)
 
-// Deviation chooser function
-deviation(source, length) =>
-    switch devTypeInput
-        "STD" => ta.stdev(source, length)
-        "MEAN" => ta.dev(source, length)
-        "ATR" => ta.atr(length)
-        => na
+deviation(type, src, length) =>
+    switch type
+        "STD" => ta.stdev(src, length)
+        "MEAN" => ta.dev(src, length)
+        => float(na)
 
-compare(method, source1, source2) =>
-    switch method
-        ">" => source1 > source2
-        "<" => source1 < source2
-        "x-over" => ta.crossover(source1, source2)
-        "x-under" => ta.crossunder(source1, source2)
-        => na
+compareSources(type, sigsrc, masrc) =>
+    switch type
+        "Price > MA" => sigsrc > masrc
+        "Price < MA" => sigsrc < masrc
+        "Price x-over MA" => ta.crossover(sigsrc, masrc)
+        "Price x-under MA" => ta.crossunder(sigsrc, masrc)
+        => bool(na)
 
-// Get signals
-base = request.security(syminfo.tickerid, timeframeInput, baseInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
-upper = request.security(syminfo.tickerid, timeframeInput, upperInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
-lower = request.security(syminfo.tickerid, timeframeInput, lowerInput, $BARMERGE_GAPS, $BARMERGE_LOOKAHEAD)
+// Lower Band Calculation
+lbMovingAverage = switch lbMAType
+    "ALMA" => ta.alma(lbMASource, lbMALen, lbAlmaOffset, lbAlmaSigma)
+    "VAMA" => vama(lbMASource, lbMALen, lbVamaFastLen, lbVamaWeight)
+    => movingAverage(lbMAType, lbMASource, lbMALen)
+lowerBand = lbMovingAverage - deviation(lbDevType, lbDevSource, lbDevLen) * lbDevScale
 
-// Parts of the BB
-basis = movingAverage(base, smoothingLengthInput)
-upperBand = movingAverage(upper, smoothingLengthInput) + upperMultInput * deviation(upper, devLengthInput)
-lowerBand = movingAverage(lower, smoothingLengthInput) - lowerMultInput * deviation(lower, devLengthInput)
+// Upper Band Calculation
+hbMovingAverage = switch hbMAType
+    "ALMA" => ta.alma(hbMASource, hbMALen, hbAlmaOffset, hbAlmaSigma)
+    "VAMA" => vama(hbMASource, hbMALen, hbVamaFastLen, hbVamaWeight)
+    => movingAverage(hbMAType, hbMASource, hbMALen)
+upperBand = hbMovingAverage + deviation(hbDevType, hbDevSource, hbDevLen) * hbDevScale
 
-// Sort out the buy / sell signals
-buy = buyVWAPInput ? ta.vwap(buyInput) : buyInput
-sell = sellVWAPInput ? ta.vwap(sellInput) : sellInput
-
-// Plotting
-bbFill = (last_bar_index - bar_index) < smoothingLengthInput ? color.new(color.white, 95) : color.new(color.gray, 95)
-tradeFill = color.new(color.teal, 50)
-plot(basis, 'BB Middle', color=color.new(color.white, 30), linewidth=0, style=plot.style_circles)
-p1 = plot(upperBand, 'BB Upper', color=color.new(color.white, 0), linewidth=1)
-p2 = plot(lowerBand, 'BB Lower', color=color.new(color.white, 0), linewidth=1)
-fill(p1, p2, color=bbFill)
-p3 = plot(buy, 'Buy', color=tradeFill, linewidth=1)
-p4 = plot(sell, 'Sell', color=tradeFill, linewidth=1)
-fill(p3, p4, color=tradeFill)
+// Color Palette
+colorBandLine = color.new(color.gray, 0)
+colorTradeZone = color.new(color.teal, 70)
+p1 = plot(upperBand, 'BB Upper', color=colorBandLine)
+p2 = plot(lowerBand, 'BB Lower', color=colorBandLine)
+fill(p1, p2, color=color.new(color.gray, 80))
+p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
+p4 = plot(hbShortSource, 'Sell', color=colorTradeZone)
+fill(p3, p4, color=colorTradeZone)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
-shouldBuy = compare(buyStrategyInput, buy, lowerBand)
-shouldSell = compare(sellStrategyInput, sell, upperBand)
+shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
+shouldSell = compareSources(hbShortStrategy, hbShortSource, upperBand)
 
 // Make sure consecutive buys/sells improve the average position price
-okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (buy * minPriceImprovementInput)
-okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= (sell / minPriceImprovementInput)
-
-// Set maximum drawdown in percent of maximum equity
-strategy.risk.max_drawdown(lockedInput ? $RISK_MAX_DRAWDOWN : 100, strategy.percent_of_equity)
+okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * lbRebuyResistance)
 
 // Entry & Exit
-if str.match(tradeTypeInput, "\\blong\\b") == "long"
-    strategy.close("buy", when=shouldSell)
-if str.match(tradeTypeInput, "\\bshort\\b") == "short"
-    strategy.close("sell", when=shouldBuy)
-if str.match(tradeTypeInput, "\\blong\\b") == "long"
-    strategy.entry("buy", strategy.long, when=shouldBuy and okOpenLong and time > backtestStartInput, qty=tradeSizeInput)
-if str.match(tradeTypeInput, "\\bshort\\b") == "short"
-    strategy.entry("sell", strategy.short, when=shouldSell and okOpenShort and time > backtestStartInput, qty=tradeSizeInput)
+strategy.close("buy", when=shouldSell)
+strategy.entry("buy", strategy.long, qty=lbLongSize, when=time > backtestStart and okOpenLong and shouldBuy)
