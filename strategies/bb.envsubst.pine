@@ -12,6 +12,8 @@ if not devMode and timeframe.period != $CHART_TIMEFRAME
 if not devMode and syminfo.tickerid != $CHART_TICKERID
     runtime.error("expecting tickerid: " + $CHART_TICKERID)
 backtestStart = input.time(timestamp($BACKTEST_START), "Backtest start")
+lbRebuyResistance = input.float($PYRAMIDING_REBUY_RESISTANCE, 'Rebuy resistance', minval=.01, step=.01)
+lbSelloffResistance = input.float($PYRAMIDING_SELOFF_RESISTANCE, 'Selloff resistance', minval=.01, step=.01)
 
 // BB Low configuration
 lbMAType = input.string($LB_MA_TYPE, 'Moving average', inline='lbma1', group=lbgrp,
@@ -33,7 +35,6 @@ lbDevScale =  input.float($LB_DEV_SCALE, 'Dev. scale factor', minval=.01, maxval
 lbLongSource = input.source($LB_LONG_SOURCE, "Buy source", inline='long1', group=lbgrp)
 lbLongStrategy = input.string($LB_LONG_STRATEGY, 'Strategy', inline='long1', group=lbgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price < MA'])
-lbRebuyResistance = input.float($LB_LONG_REBUY_RESISTANCE, 'Rebuy resistance', minval=.01, step=.01, group=lbgrp)
 
 // BB High configuration
 hbMAType = input.string($HB_MA_TYPE, 'Moving average', inline='hbma1', group=hbgrp,
@@ -55,7 +56,6 @@ hbDevScale =  input.float($HB_DEV_SCALE, 'Dev. scale factor', minval=.01, maxval
 hbShortSource = input.source($HB_SHORT_SOURCE, "Sell source", inline='short1', group=hbgrp)
 hbShortStrategy = input.string($HB_SHORT_STRATEGY, 'Strategy', inline='short1', group=hbgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price > MA'])
-
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
 vama(src, dev1Len, dev2Len, scale) =>
@@ -114,18 +114,22 @@ p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
 p4 = plot(hbShortSource, 'Sell', color=colorTradeZone)
 fill(p3, p4, color=colorTradeZone)
 
-// isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
-shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
-shouldSell = compareSources(hbShortStrategy, hbShortSource, upperBand)
-
-// Make sure consecutive buys/sells improve the average position price
-okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * lbRebuyResistance)
-
+// calculate the order size in asset (BTC) depending on the UNIT
 longOrderSize = switch $LB_LONG_UNIT
     strategy.percent_of_equity => ($LB_LONG_SIZE / 100 * (strategy.initial_capital + strategy.netprofit)) / close
     strategy.cash => $LB_LONG_SIZE / close
     => $LB_LONG_SIZE
 
+// isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
+shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
+shouldSell = strategy.opentrades > 1 and (close / strategy.position_avg_price) >= lbSelloffResistance
+shouldClose = compareSources(hbShortStrategy, hbShortSource, upperBand)
+
+// Make sure consecutive buys/sells improve the average position price
+okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * lbRebuyResistance)
+
 // Entry & Exit
-strategy.close("buy", when=shouldSell)
-strategy.entry("buy", strategy.long, qty=longOrderSize, when=time > backtestStart and okOpenLong and shouldBuy)
+comment = "(opentrades: " + str.tostring(strategy.opentrades) + ")"
+strategy.close("buy", comment=comment, when=shouldClose)
+strategy.close("buy", qty=math.max(strategy.position_size - longOrderSize, .0), comment=comment, when=shouldSell)
+strategy.entry("buy", strategy.long, qty=longOrderSize, comment=comment, when=time > backtestStart and okOpenLong and shouldBuy)
