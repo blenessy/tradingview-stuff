@@ -1,5 +1,5 @@
 //@version=5
-strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT)
+strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT, default_qty_type=$LB_LONG_UNIT, default_qty_value=$LB_LONG_SIZE)
 
 // Group names
 lbgrp = "Low Band - Buy"
@@ -33,8 +33,7 @@ lbDevScale =  input.float($LB_DEV_SCALE, 'Dev. scale factor', minval=.01, maxval
 lbLongSource = input.source($LB_LONG_SOURCE, "Buy source", inline='long1', group=lbgrp)
 lbLongStrategy = input.string($LB_LONG_STRATEGY, 'Strategy', inline='long1', group=lbgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price < MA'])
-lbLongSize = input.float($LB_LONG_SIZE, 'Order size', minval=0, step=.001, inline='long2', group=lbgrp)
-lbRebuyResistance = input.float($LB_LONG_REBUY_RESISTANCE, 'Rebuy resistance', minval=.01, step=.01, inline='long2', group=lbgrp)
+lbRebuyResistance = input.float($LB_LONG_REBUY_RESISTANCE, 'Rebuy resistance', minval=.01, step=.01, group=lbgrp)
 
 // BB High configuration
 hbMAType = input.string($HB_MA_TYPE, 'Moving average', inline='hbma1', group=hbgrp,
@@ -123,4 +122,4 @@ okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (
 
 // Entry & Exit
 strategy.close("buy", when=shouldSell)
-strategy.entry("buy", strategy.long, qty=lbLongSize, when=time > backtestStart and okOpenLong and shouldBuy)
+strategy.entry("buy", strategy.long, when=time > backtestStart and okOpenLong and shouldBuy)
