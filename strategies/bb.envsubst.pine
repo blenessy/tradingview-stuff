@@ -1,5 +1,5 @@
 //@version=5
-strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT, default_qty_type=$LB_LONG_UNIT, default_qty_value=$LB_LONG_SIZE)
+strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT)
 
 // Group names
 lbgrp = "Low Band - Buy"
@@ -89,6 +89,7 @@ compareSources(type, sigsrc, masrc) =>
         "Price x-under MA" => ta.crossunder(sigsrc, masrc)
         => bool(na)
 
+
 // Lower Band Calculation
 lbMovingAverage = switch lbMAType
     "ALMA" => ta.alma(lbMASource, lbMALen, lbAlmaOffset, lbAlmaSigma)
@@ -120,6 +121,11 @@ shouldSell = compareSources(hbShortStrategy, hbShortSource, upperBand)
 // Make sure consecutive buys/sells improve the average position price
 okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * lbRebuyResistance)
 
+longOrderSize = switch $LB_LONG_UNIT
+    strategy.percent_of_equity => ($LB_LONG_SIZE / 100 * (strategy.initial_capital + strategy.netprofit)) / close
+    strategy.cash => $LB_LONG_SIZE / close
+    => $LB_LONG_SIZE
+
 // Entry & Exit
 strategy.close("buy", when=shouldSell)
-strategy.entry("buy", strategy.long, when=time > backtestStart and okOpenLong and shouldBuy)
+strategy.entry("buy", strategy.long, qty=longOrderSize, when=time > backtestStart and okOpenLong and shouldBuy)
