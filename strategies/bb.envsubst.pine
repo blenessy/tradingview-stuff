@@ -1,5 +1,5 @@
 //@version=5
-strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT)
+strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT, default_qty_type=$LB_LONG_UNIT, default_qty_value=$LB_LONG_SIZE)
 
 // Group names
 lbgrp = "Low Band - Buy"
@@ -114,12 +114,6 @@ p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
 p4 = plot(hbShortSource, 'Sell', color=colorTradeZone)
 fill(p3, p4, color=colorTradeZone)
 
-// calculate the order size in asset (BTC) depending on the UNIT
-longOrderSize = switch $LB_LONG_UNIT
-    strategy.percent_of_equity => ($LB_LONG_SIZE / 100 * (strategy.initial_capital + strategy.netprofit)) / close
-    strategy.cash => $LB_LONG_SIZE / close
-    => $LB_LONG_SIZE
-
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
 shouldSell = strategy.opentrades > 1 and (close / strategy.position_avg_price) >= lbSelloffResistance
@@ -129,7 +123,6 @@ shouldClose = compareSources(hbShortStrategy, hbShortSource, upperBand)
 okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * lbRebuyResistance)
 
 // Entry & Exit
-comment = "(opentrades: " + str.tostring(strategy.opentrades) + ")"
-strategy.close("buy", comment=comment, when=shouldClose)
-strategy.close("buy", qty=math.max(strategy.position_size - longOrderSize, .0), comment=comment, when=shouldSell)
-strategy.entry("buy", strategy.long, qty=longOrderSize, comment=comment, when=time > backtestStart and okOpenLong and shouldBuy)
+strategy.close(strategy.position_entry_name, when=shouldSell)
+strategy.close_all(when=shouldClose)
+strategy.entry("position " + str.tostring(strategy.opentrades + 1), strategy.long, when=time > backtestStart and okOpenLong and shouldBuy)
