@@ -12,8 +12,8 @@ if not devMode and timeframe.period != $CHART_TIMEFRAME
 if not devMode and syminfo.tickerid != $CHART_TICKERID
     runtime.error("expecting tickerid: " + $CHART_TICKERID)
 backtestStart = input.time(timestamp($BACKTEST_START), "Backtest start")
-lbRebuyResistance = input.float($PYRAMIDING_REBUY_RESISTANCE, 'Rebuy resistance', minval=.01, step=.01)
-lbSelloffResistance = input.float($PYRAMIDING_SELOFF_RESISTANCE, 'Selloff resistance', minval=.01, step=.01)
+rebuyResistance = input.float($PYRAMIDING_REBUY_RESISTANCE, 'Rebuy resistance', minval=.01, step=.01)
+maxProfitablePositions = input.int($PYRAMIDING_MAX_PROFIT_POSITIONS, 'Max profitable positions', minval=1)
 
 // BB Low configuration
 lbMAType = input.string($LB_MA_TYPE, 'Moving average', inline='lbma1', group=lbgrp,
@@ -116,13 +116,14 @@ fill(p3, p4, color=colorTradeZone)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
-shouldSell = strategy.opentrades > 1 and (close / strategy.position_avg_price) >= lbSelloffResistance
+shouldSell = strategy.opentrades > maxProfitablePositions and close >= strategy.position_avg_price
 shouldClose = compareSources(hbShortStrategy, hbShortSource, upperBand)
 
 // Make sure consecutive buys/sells improve the average position price
-okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * lbRebuyResistance)
+okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * rebuyResistance)
 
 // Entry & Exit
-strategy.close(strategy.position_entry_name, when=shouldSell)
+for i = maxProfitablePositions + 1 to strategy.opentrades by 1
+    strategy.close("position " + str.tostring(i), when=shouldSell)
 strategy.close_all(when=shouldClose)
 strategy.entry("position " + str.tostring(strategy.opentrades + 1), strategy.long, when=time > backtestStart and okOpenLong and shouldBuy)
