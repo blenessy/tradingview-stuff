@@ -1,9 +1,9 @@
 //@version=5
-strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT, default_qty_type=$LB_LONG_UNIT, default_qty_value=$LB_LONG_SIZE)
+strategy(shorttitle=$SHORT_TITLE, title=$TITLE, overlay=true, pyramiding=$PYRAMIDING, initial_capital=$INITIAL_CAPITAL, commission_value=$COMMISSION_PERCENT, default_qty_type=$QTY_TYPE, default_qty_value=$QTY_VALUE)
 
 // Group names
-lbgrp = "Low Band - Buy"
-hbgrp = "High Band - Sell"
+lbgrp = "Lower Band - Buy"
+ubgrp = "Upper Band - Sell"
 
 // General Inputs
 devMode = input.bool($DEV_MODE, "Development mode")
@@ -15,7 +15,7 @@ backtestStart = input.time(timestamp($BACKTEST_START), "Backtest start")
 rebuyResistance = input.float($PYRAMIDING_REBUY_RESISTANCE, 'Rebuy resistance', minval=.01, step=.01)
 maxProfitablePositions = input.int($PYRAMIDING_MAX_PROFIT_POSITIONS, 'Max profitable positions', minval=1)
 
-// BB Low configuration
+// BB Lower Band configuration
 lbMAType = input.string($LB_MA_TYPE, 'Moving average', inline='lbma1', group=lbgrp,
      options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
 lbMALen = input.int($LB_MA_LENGTH, 'MA length', minval=3, inline='lbma1', group=lbgrp)
@@ -36,25 +36,25 @@ lbLongSource = input.source($LB_LONG_SOURCE, "Buy source", inline='long1', group
 lbLongStrategy = input.string($LB_LONG_STRATEGY, 'Strategy', inline='long1', group=lbgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price < MA'])
 
-// BB High configuration
-hbMAType = input.string($HB_MA_TYPE, 'Moving average', inline='hbma1', group=hbgrp,
+// BB Upper Band configuration
+ubMAType = input.string($UB_MA_TYPE, 'Moving average', inline='ubma1', group=ubgrp,
      options=["ALMA", 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
-hbMALen = input.int($HB_MA_LENGTH, 'MA length', minval=3, inline='hbma1', group=hbgrp)
-hbMASource = input.source($HB_MA_SOURCE, "MA source", group=hbgrp)
+ubMALen = input.int($UB_MA_LENGTH, 'MA length', minval=3, inline='ubma1', group=ubgrp)
+ubMASource = input.source($UB_MA_SOURCE, "MA source", group=ubgrp)
 
-hbAlmaOffset = input.float($HB_ALMA_OFFSET, "ALMA offset", step=.01, minval=.01, inline='hbalma', group=hbgrp)
-hbAlmaSigma = input.float($HB_ALMA_SIGMA, "ALMA sigma", step=.1, minval=.1, inline='hbalma', group=hbgrp)
+ubAlmaOffset = input.float($UB_ALMA_OFFSET, "ALMA offset", step=.01, minval=.01, inline='ubalma', group=ubgrp)
+ubAlmaSigma = input.float($UB_ALMA_SIGMA, "ALMA sigma", step=.1, minval=.1, inline='ubalma', group=ubgrp)
 
-hbVamaFastLen = input.int($HB_VAMA_FAST_LENGTH, "VAMA fast length", minval=2, inline='hbvama', group=hbgrp)
-hbVamaWeight = input.float($HB_VAMA_WEIGHT, "VAMA weight", step=.01, minval=.01, inline='hbvama', group=hbgrp)
+ubVamaFastLen = input.int($UB_VAMA_FAST_LENGTH, "VAMA fast length", minval=2, inline='ubvama', group=ubgrp)
+ubVamaWeight = input.float($UB_VAMA_WEIGHT, "VAMA weight", step=.01, minval=.01, inline='ubvama', group=ubgrp)
 
-hbDevType = input.string($HB_DEV_TYPE, 'Deviation', options=['STD', 'MEAN'], inline="hbdev1", group=hbgrp)
-hbDevLen = input.int($HB_DEV_LENGTH, 'Dev. length', minval=3, inline="hbdev1", group=hbgrp)
-hbDevSource = input.source($HB_DEV_SOURCE, "Dev. source", inline="hbdev2", group=hbgrp)
-hbDevScale =  input.float($HB_DEV_SCALE, 'Dev. scale factor', minval=.01, maxval=50, step=.05, inline="hbdev2", group=hbgrp)
+ubDevType = input.string($UB_DEV_TYPE, 'Deviation', options=['STD', 'MEAN'], inline="ubdev1", group=ubgrp)
+ubDevLen = input.int($UB_DEV_LENGTH, 'Dev. length', minval=3, inline="ubdev1", group=ubgrp)
+ubDevSource = input.source($UB_DEV_SOURCE, "Dev. source", inline="ubdev2", group=ubgrp)
+ubDevScale =  input.float($UB_DEV_SCALE, 'Dev. scale factor', minval=.01, maxval=50, step=.05, inline="ubdev2", group=ubgrp)
 
-hbShortSource = input.source($HB_SHORT_SOURCE, "Sell source", inline='short1', group=hbgrp)
-hbShortStrategy = input.string($HB_SHORT_STRATEGY, 'Strategy', inline='short1', group=hbgrp,
+ubShortSource = input.source($UB_SHORT_SOURCE, "Sell source", inline='short1', group=ubgrp)
+ubShortStrategy = input.string($UB_SHORT_STRATEGY, 'Strategy', inline='short1', group=ubgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price > MA'])
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
@@ -98,11 +98,11 @@ lbMovingAverage = switch lbMAType
 lowerBand = lbMovingAverage - deviation(lbDevType, lbDevSource, lbDevLen) * lbDevScale
 
 // Upper Band Calculation
-hbMovingAverage = switch hbMAType
-    "ALMA" => ta.alma(hbMASource, hbMALen, hbAlmaOffset, hbAlmaSigma)
-    "VAMA" => vama(hbMASource, hbMALen, hbVamaFastLen, hbVamaWeight)
-    => movingAverage(hbMAType, hbMASource, hbMALen)
-upperBand = hbMovingAverage + deviation(hbDevType, hbDevSource, hbDevLen) * hbDevScale
+ubMovingAverage = switch ubMAType
+    "ALMA" => ta.alma(ubMASource, ubMALen, ubAlmaOffset, ubAlmaSigma)
+    "VAMA" => vama(ubMASource, ubMALen, ubVamaFastLen, ubVamaWeight)
+    => movingAverage(ubMAType, ubMASource, ubMALen)
+upperBand = ubMovingAverage + deviation(ubDevType, ubDevSource, ubDevLen) * ubDevScale
 
 // Color Palette
 colorBandLine = color.new(color.gray, 0)
@@ -111,13 +111,13 @@ p1 = plot(upperBand, 'BB Upper', color=colorBandLine)
 p2 = plot(lowerBand, 'BB Lower', color=colorBandLine)
 fill(p1, p2, color=color.new(color.gray, 80))
 p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
-p4 = plot(hbShortSource, 'Sell', color=colorTradeZone)
+p4 = plot(ubShortSource, 'Sell', color=colorTradeZone)
 fill(p3, p4, color=colorTradeZone)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
 shouldSell = strategy.opentrades > maxProfitablePositions and close >= strategy.position_avg_price
-shouldClose = compareSources(hbShortStrategy, hbShortSource, upperBand)
+shouldClose = compareSources(ubShortStrategy, ubShortSource, upperBand)
 
 // Make sure consecutive buys/sells improve the average position price
 okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * rebuyResistance)
