@@ -71,7 +71,7 @@ ubShortStrategy = input.string(${UB_SHORT_STRATEGY:-'Price > MA'}, 'Strategy', i
 // Advanced configuration options
 rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp)
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', minval=1, group=advgrp)
-takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-1000}, 'Take profit %', minval=.1, step=.1, group=advgrp)
+takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-1000}, 'Take profit %', minval=.1, step=1, group=advgrp)
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
 vama(src, dev1Len, dev2Len, scale) =>
