@@ -47,6 +47,7 @@ The below parameters are used in the ema.env template.
 | `QTY_VALUE` | 100 | The quantity of `QTY_TYPE` to trade |
 | `SHORT_TITLE` | 'BBS' | Strategy title visible on chart |
 | `TITLE` | 'Bollinger Bands Strategy' | Strategy title |
+| `TAKE_PROFIT_PERCENT` | 1000 | When to close a winning position. |
 | **Bollinger Bands common configuration** |
 | `ALMA_OFFSET` | 0.85 | Arnoud Legoux Moving Average offset parameter. Controls tradeoff between smoothness (closer to 1) and responsiveness (closer to 0). |
 | `ALMA_SIGMA` | 6 | Changes the smoothness of ALMA. The larger sigma the smoother ALMA. |

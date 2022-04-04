@@ -10,8 +10,8 @@ strategy(shorttitle=${SHORT_TITLE:-'BBS'},
       pyramiding=${PYRAMIDING:-1},
       initial_capital=${INITIAL_CAPITAL:-1000},
       commission_value=${COMMISSION_PERCENT:-.07},
-      default_qty_type=${ORDER_SIZE_UNIT:-strategy.cash},
-      default_qty_value=${ORDER_SIZE:-100})
+      default_qty_type=${QTY_TYPE:-strategy.cash},
+      default_qty_value=${QTY_SIZE:-100})
 
 // Group names
 lbgrp = 'Low Band - Buy'
