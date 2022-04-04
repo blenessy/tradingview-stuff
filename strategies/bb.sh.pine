@@ -1,0 +1,148 @@
+#!/bin/sh
+
+set -e
+
+cat <<EOF
+//@version=5
+strategy(shorttitle=${SHORT_TITLE:-'BBS'},
+      title=${TITLE:-'Bollinger Bands Strategy'},
+      overlay=true,
+      pyramiding=${PYRAMIDING:-1},
+      initial_capital=${INITIAL_CAPITAL:-1000},
+      commission_value=${COMMISSION_PERCENT:-.07},
+      default_qty_type=${ORDER_SIZE_UNIT:-strategy.cash},
+      default_qty_value=${ORDER_SIZE:-100})
+
+// Group names
+lbgrp = 'Low Band - Buy'
+ubgrp = 'Upper Band - Sell'
+advgrp = 'Pyramiding'
+
+// General Inputs
+devMode = input.bool(${DEV_MODE:-true}, 'Development mode')
+if not devMode and timeframe.period != ${CHART_TIMEFRAME:-'60'}
+    runtime.error('expecting chart timeframe: ' + ${CHART_TIMEFRAME:-'60'})
+if not devMode and syminfo.tickerid != ${CHART_TICKERID:-'FTX:BTCPERP'}
+    runtime.error('expecting tickerid: ' + ${CHART_TICKERID:-'FTX:BTCPERP'})
+backtestStart = input.time(timestamp(${BACKTEST_START:-'2021-04-01T00:00:00'}), 'Backtest start')
+
+// BB Low configuration
+lbMAType = input.string(${LB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inline='lbma1', group=lbgrp,
+     options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+lbMALen = input.int(${LB_MA_LENGTH:-${MA_LENGTH:-9}}, 'MA length', minval=3, inline='lbma1', group=lbgrp)
+lbMASource = input.source(${LB_MA_SOURCE:-${MA_SOURCE:-low}}, 'MA source', group=lbgrp)
+
+lbAlmaOffset = input.float(${LB_ALMA_OFFSET:-${ALMA_OFFSET:-.85}}, 'ALMA offset', step=.01, minval=.01, inline='lbalma', group=lbgrp)
+lbAlmaSigma = input.float(${LB_ALMA_SIGMA:-${ALMA_SIGMA:-6}}, 'ALMA sigma', step=.1, minval=.1, inline='lbalma', group=lbgrp)
+
+lbVamaFastLen = input.int(${LB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', minval=2, inline='lbvama', group=lbgrp)
+lbVamaWeight = input.float(${LB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='lbvama', group=lbgrp)
+
+lbDevType = input.string(${LB_DEV_TYPE:-${DEV_TYPE:-'STD'}}, 'Deviation', options=['STD', 'MEAN'], inline='lbdev1', group=lbgrp)
+lbDevLen = input.int(${LB_DEV_LENGTH:-${LB_MA_LENGTH:-${MA_LENGTH:-9}}}, 'Dev. length', minval=3, inline='lbdev1', group=lbgrp)
+lbDevSource = input.source(${LB_DEV_SOURCE:-${LB_MA_SOURCE:-${MA_SOURCE:-low}}}, 'Dev. source', inline='lbdev2', group=lbgrp)
+lbDevScale =  input.float(${LB_DEV_SCALE:-${DEV_SCALE:-2}}, 'Dev. scale factor', minval=.01, maxval=50, step=.05, inline='lbdev2', group=lbgrp)
+
+lbLongSource = input.source(${LB_LONG_SOURCE:-${SOURCE:-close}}, 'Buy source', inline='long1', group=lbgrp)
+lbLongStrategy = input.string(${LB_LONG_STRATEGY:-'Price x-under MA'}, 'Strategy', inline='long1', group=lbgrp,
+     options=['Price x-over MA', 'Price x-under MA', 'Price < MA'])
+
+// BB High configuration
+ubMAType = input.string(${UB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inline='ubma1', group=ubgrp,
+     options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+ubMALen = input.int(${UB_MA_LENGTH:-${MA_LENGTH:-9}}, 'MA length', minval=3, inline='ubma1', group=ubgrp)
+ubMASource = input.source(${UB_MA_SOURCE:-${MA_SOURCE:-high}}, 'MA source', group=ubgrp)
+
+ubAlmaOffset = input.float(${UB_ALMA_OFFSET:-${ALMA_OFFSET:-.85}}, 'ALMA offset', step=.01, minval=.01, inline='ubalma', group=ubgrp)
+ubAlmaSigma = input.float(${UB_ALMA_SIGMA:-${ALMA_SIGMA:-6}}, 'ALMA sigma', step=.1, minval=.1, inline='ubalma', group=ubgrp)
+
+ubVamaFastLen = input.int(${UB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', minval=2, inline='ubvama', group=ubgrp)
+ubVamaWeight = input.float(${UB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='ubvama', group=ubgrp)
+
+ubDevType = input.string(${UB_DEV_TYPE:-${DEV_TYPE:-'STD'}}, 'Deviation', options=['STD', 'MEAN'], inline='ubdev1', group=ubgrp)
+ubDevLen = input.int(${UB_DEV_LENGTH:-${UB_MA_LENGTH:-${MA_LENGTH:-9}}}, 'Dev. length', minval=3, inline='ubdev1', group=ubgrp)
+ubDevSource = input.source(${UB_DEV_SOURCE:-${UB_MA_SOURCE:-${MA_SOURCE:-high}}}, 'Dev. source', inline='ubdev2', group=ubgrp)
+ubDevScale =  input.float(${UB_DEV_SCALE:-${DEV_SCALE:-2}}, 'Dev. scale factor', minval=.01, maxval=50, step=.05, inline='ubdev2', group=ubgrp)
+
+ubShortSource = input.source(${UB_SHORT_SOURCE:-${SOURCE:-close}}, 'Sell source', inline='short1', group=ubgrp)
+ubShortStrategy = input.string(${UB_SHORT_STRATEGY:-'Price > MA'}, 'Strategy', inline='short1', group=ubgrp,
+     options=['Price x-over MA', 'Price x-under MA', 'Price > MA'])
+
+// Advanced configuration options
+rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp)
+irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', minval=1, group=advgrp)
+takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-1000}, 'Take profit %', minval=.1, step=.1, group=advgrp)
+
+// https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
+vama(src, dev1Len, dev2Len, scale) =>
+    longStdDev = ta.stdev(src, dev2Len >= dev1Len ? dev2Len : dev1Len)
+    shortStdDev = ta.stdev(src, dev2Len >= dev1Len ? dev1Len : dev2Len)
+    alpha = shortStdDev / longStdDev * scale
+    ma = float(na)
+    ma := alpha * src + (1 - alpha) * nz(ma[1])
+
+movingAverage(type, src, length) =>
+    switch type
+        'EMA' => ta.ema(src, length)
+        'HMA' => ta.ema(src, length)
+        'RMA' => ta.rma(src, length)
+        'SMA' => ta.sma(src, length)
+        'VWMA' => ta.vwma(src, length)
+        'WMA' => ta.wma(src, length)
+        => float(na)
+
+deviation(type, src, length) =>
+    switch type
+        'STD' => ta.stdev(src, length)
+        'MEAN' => ta.dev(src, length)
+        => float(na)
+
+compareSources(type, sigsrc, masrc) =>
+    switch type
+        'Price > MA' => sigsrc > masrc
+        'Price < MA' => sigsrc < masrc
+        'Price x-over MA' => ta.crossover(sigsrc, masrc)
+        'Price x-under MA' => ta.crossunder(sigsrc, masrc)
+        => bool(na)
+
+// Lower Band Calculation
+lbMovingAverage = switch lbMAType
+    'ALMA' => ta.alma(lbMASource, lbMALen, lbAlmaOffset, lbAlmaSigma)
+    'VAMA' => vama(lbMASource, lbMALen, lbVamaFastLen, lbVamaWeight)
+    => movingAverage(lbMAType, lbMASource, lbMALen)
+lowerBand = lbMovingAverage - deviation(lbDevType, lbDevSource, lbDevLen) * lbDevScale
+
+// Upper Band Calculation
+ubMovingAverage = switch ubMAType
+    'ALMA' => ta.alma(ubMASource, ubMALen, ubAlmaOffset, ubAlmaSigma)
+    'VAMA' => vama(ubMASource, ubMALen, ubVamaFastLen, ubVamaWeight)
+    => movingAverage(ubMAType, ubMASource, ubMALen)
+upperBand = ubMovingAverage + deviation(ubDevType, ubDevSource, ubDevLen) * ubDevScale
+
+// Color Palette
+colorBandLine = color.new(color.gray, 0)
+colorTradeZone = color.new(color.teal, 50)
+p1 = plot(upperBand, 'BB Upper', color=colorBandLine)
+p2 = plot(lowerBand, 'BB Lower', color=colorBandLine)
+fill(p1, p2, color=color.new(color.gray, 80))
+p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
+p4 = plot(ubShortSource, 'Sell', color=colorTradeZone)
+fill(p3, p4, color=colorTradeZone)
+
+// isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
+shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
+shouldSell = strategy.opentrades > irreduciblePositions and close >= strategy.position_avg_price
+shouldClose = compareSources(ubShortStrategy, ubShortSource, upperBand)
+profitPercent = 100 * (close / strategy.position_avg_price - 1)
+
+// Make sure consecutive buys/sells improve the average position price
+okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * rebuyResistance)
+
+// Entry & Exit
+for i = irreduciblePositions + 1 to strategy.opentrades by 1
+    strategy.close('position ' + str.tostring(i), when=shouldSell)
+strategy.close_all(comment='profit: ' + str.tostring(math.round(profitPercent, 2)) + '%',
+     when=shouldClose or profitPercent >= takeProfitPercent)
+strategy.entry('position ' + str.tostring(strategy.opentrades + 1),
+     strategy.long, when=time > backtestStart and okOpenLong and shouldBuy)
+EOF

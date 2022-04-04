@@ -6,4 +6,4 @@ export
 
 .PHONY: pine
 pine:
-	@envsubst <strategies/$(STRATEGY).envsubst.pine
+	@sh -e strategies/$(STRATEGY).sh.pine
