@@ -42,10 +42,12 @@ The below parameters are used in the ema.env template.
 | `COMMISSION_PERCENT` | 0.07 | Cost of trades at exchange |
 | `DEV_MODE` | true | Toggle development mode |
 | `INITIAL_CAPITAL` | 1000 | Start capital for the strategy |
+| `LONG_TRADES` | true | Whether to enable long (buying) trades |
 | `PYRAMIDING` | 1 | Maximum number of entries allowed in the same direction. |
 | `QTY_TYPE` | strategy.cash | Determines what the value used in the `QTY_VALUE` parameter represents. Possible values are: strategy.fixed, strategy.cash, and strategy.percent_of_equity |
 | `QTY_VALUE` | 100 | The quantity of `QTY_TYPE` to trade |
 | `SHORT_TITLE` | 'BBS' | Strategy title visible on chart |
+| `SHORT_TRADES` | true | Whether to enable short (selling) trades |
 | `TITLE` | 'Bollinger Bands Strategy' | Strategy title |
 | `TAKE_PROFIT_PERCENT` | 1000 | When to close a winning position. |
 | **Bollinger Bands common configuration** |
@@ -88,8 +90,8 @@ The below parameters are used in the ema.env template.
 | `UB_VAMA_FAST_LENGTH` | `VAMA_FAST_LENGTH` | Overrides `VAMA_FAST_LENGTH`. |
 | `UB_VAMA_WEIGHT` | `VAMA_WEIGHT` | Overrides `VAMA_WEIGHT`. |
 | **Pyramiding related configuration** |
-| `PYRAMIDING_REBUY_RESISTANCE` | | (avg. position price / `LB_LONG_SOURCE` price) >= `PYRAMIDING_REBUY_RESISTANCE` before considering to open new long-position. |
-| `PYRAMIDING_IRREDUCIBLE_POSITIONS` | | Number of position to keep open for profit, the rest will be closed at beak-event to protect bot from long downtrends. Set to >= `PYRAMIDING` to disable. |
+| `PYRAMIDING_REBUY_RESISTANCE` | 0.01 | (avg. position price / `LB_LONG_SOURCE` price) >= `PYRAMIDING_REBUY_RESISTANCE` before considering to open new long-position. |
+| `PYRAMIDING_IRREDUCIBLE_POSITIONS` | 100 | Number of position to keep open for profit, the rest will be closed at beak-event to protect bot from long downtrends. Set to >= `PYRAMIDING` to disable. |
 
 # What is [FTX](https://ftx.com/)?
 

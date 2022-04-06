@@ -19,7 +19,9 @@ ubgrp = 'Upper Band - Sell'
 advgrp = 'Pyramiding'
 
 // General Inputs
-devMode = input.bool(${DEV_MODE:-true}, 'Development mode')
+longEnabled = input.bool(${LONG_TRADES:-true}, 'Long trades', inline='mode')
+shortEnabled = input.bool(${SHORT_TRADES:-false}, 'Short trades', inline='mode')
+devMode = input.bool(${DEV_MODE:-true}, 'Development mode', inline='mode')
 if not devMode and timeframe.period != ${CHART_TIMEFRAME:-'60'}
     runtime.error('expecting chart timeframe: ' + ${CHART_TIMEFRAME:-'60'})
 if not devMode and syminfo.tickerid != ${CHART_TICKERID:-'FTX:BTCPERP'}
@@ -131,18 +133,30 @@ fill(p3, p4, color=colorTradeZone)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
-shouldSell = strategy.opentrades > irreduciblePositions and close >= strategy.position_avg_price
-shouldClose = compareSources(ubShortStrategy, ubShortSource, upperBand)
-profitPercent = 100 * (close / strategy.position_avg_price - 1)
+shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand)
 
 // Make sure consecutive buys/sells improve the average position price
 okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * rebuyResistance)
+okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= (rebuyResistance / ubShortSource)
 
-// Entry & Exit
-for i = irreduciblePositions + 1 to strategy.opentrades by 1
-    strategy.close('position ' + str.tostring(i), when=shouldSell)
-strategy.close_all(comment='profit: ' + str.tostring(math.round(profitPercent, 2)) + '%',
-     when=shouldClose or profitPercent >= takeProfitPercent)
-strategy.entry('position ' + str.tostring(strategy.opentrades + 1),
-     strategy.long, when=time > backtestStart and okOpenLong and shouldBuy)
+
+// reduce position
+strategy.close('average down', comment='reduce long',
+     when=longEnabled and close >= strategy.position_avg_price)
+strategy.close('average up', comment='reduce short',
+     when=shortEnabled and close <= strategy.position_avg_price)
+
+// profit
+profitPercentBuy = 100 * (close / strategy.position_avg_price - 1)
+strategy.close('buy', comment='profit: ' + str.tostring(math.round(profitPercentBuy, 2)) + '%',
+     when=longEnabled and (shouldSell or profitPercentBuy >= takeProfitPercent))
+profitPercentSell = 100 * (strategy.position_avg_price / close - 1)
+strategy.close('sell', comment='profit: ' + str.tostring(math.round(profitPercentSell, 2)) + '%',
+     when=shortEnabled and (shouldBuy or profitPercentSell >= takeProfitPercent))
+
+// start trading
+strategy.entry(strategy.opentrades >= irreduciblePositions ? 'average down' : 'buy', strategy.long,
+     when=longEnabled and (time > backtestStart and okOpenLong and shouldBuy))
+strategy.entry(strategy.opentrades >= irreduciblePositions ? 'average up' : 'sell', strategy.short,
+     when=shortEnabled and (time > backtestStart and okOpenShort and shouldSell))
 EOF
