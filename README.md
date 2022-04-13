@@ -91,6 +91,7 @@ The below parameters are used in the ema.env template.
 | `UB_VAMA_WEIGHT` | `VAMA_WEIGHT` | Overrides `VAMA_WEIGHT`. |
 | **Pyramiding related configuration** |
 | `PYRAMIDING_REBUY_RESISTANCE` | 0.01 | (avg. position price / `LB_LONG_SOURCE` price) >= `PYRAMIDING_REBUY_RESISTANCE` before considering to open new long-position. |
+| `PYRAMIDING_REBUY_USE_POS_AVG_PRICE` | true | When considering to rebuy use the open position's average price instead of the last opened position. |
 | `PYRAMIDING_IRREDUCIBLE_POSITIONS` | 100 | Number of position to keep open for profit, the rest will be closed at beak-event to protect bot from long downtrends. Set to >= `PYRAMIDING` to disable. |
 
 # What is [FTX](https://ftx.com/)?

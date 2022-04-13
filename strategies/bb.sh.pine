@@ -79,7 +79,8 @@ rsiUpperBand = input.int(${RSI_UPPER_BAND:-70}, minval=1, title='Upper band', in
 rsiLowerBand = input.int(${RSI_LOWER_BAND:-30}, minval=1, title='Lower band', inline='rsi2', group=rsigrp)
 
 // Advanced configuration options
-rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp)
+rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp, inline='rebuy')
+rebuyUsePosAvgPrice = input.bool(${PYRAMIDING_REBUY_USE_POS_AVG_PRICE:-true}, 'Use pos. average price', group=advgrp, inline='rebuy')
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', minval=1, group=advgrp)
 takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-1000}, 'Take profit %', minval=.1, step=1, group=advgrp)
 
@@ -145,14 +146,27 @@ p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
 p4 = plot(ubShortSource, 'Sell', color=colorTradeZone)
 fill(p3, p4, color=colorTradeZone)
 
+if barstate.islastconfirmedhistory
+    t0 = strategy.closedtrades.entry_time(0)
+    t1 = strategy.closedtrades.exit_time(strategy.closedtrades - 1)
+    prettyMonth = (month(t0) > 9 ? '' : '0') + str.tostring(month(t0))
+    prettyDay = (dayofmonth(t0) > 9 ? '' : '0') + str.tostring(dayofmonth(t0))
+    profitPerDay = nz(strategy.netprofit) / ((t1 - t0) / 86400000)
+    summary = str.format('First trade date: {0}-{1}-{2}\nDaily profit: \${3}\nPosition average price: \${4}',
+         str.tostring(year(t0)), prettyMonth, prettyDay,
+         math.round(profitPerDay, 2),
+         math.round(nz(strategy.position_avg_price), 2))
+    tbl = table.new(position.top_right, 1, 1)
+    table.cell(tbl, 0, 0, 'ⓘ', text_color = color.blue, tooltip=summary)
+
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (confirmationEnabled ? overSold : true)
 shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (confirmationEnabled ? overBought : true)
 
 // Make sure consecutive buys/sells improve the average position price
-okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * rebuyResistance)
-okOpenShort = na(strategy.position_avg_price) or strategy.position_avg_price <= (rebuyResistance / ubShortSource)
-
+rebuyPrice = rebuyUsePosAvgPrice ? strategy.position_avg_price : strategy.opentrades.entry_price(strategy.opentrades - 1)
+okOpenLong = strategy.opentrades == 0 or rebuyPrice >= (lbLongSource * rebuyResistance)
+okOpenShort = strategy.opentrades == 0 or rebuyPrice <= (rebuyResistance / ubShortSource)
 
 // reduce position
 strategy.close('average down', comment='reduce long',
@@ -162,10 +176,10 @@ strategy.close('average up', comment='reduce short',
 
 // profit
 profitPercentBuy = 100 * (close / strategy.position_avg_price - 1)
-strategy.close('buy', comment='profit: ' + str.tostring(math.round(profitPercentBuy, 2)) + '%',
+strategy.close('buy', comment=str.format('profit: {0}%', math.round(profitPercentBuy, 2)),
      when=longEnabled and (shouldSell or profitPercentBuy >= takeProfitPercent))
 profitPercentSell = 100 * (strategy.position_avg_price / close - 1)
-strategy.close('sell', comment='profit: ' + str.tostring(math.round(profitPercentSell, 2)) + '%',
+strategy.close('sell', comment=str.format('profit: {0}%', math.round(profitPercentBuy, 2)),
      when=shortEnabled and (shouldBuy or profitPercentSell >= takeProfitPercent))
 
 // start trading
