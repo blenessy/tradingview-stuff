@@ -57,7 +57,7 @@ The below parameters are used in the ema.env template.
 | `DEV_SCALE` | 2 | Deviation factor to use when calculating the Bollinger Band. |
 | `MA_TYPE` | 'EMA' | Moving Average type, e.g. SMA, EMA, ALMA, etc. |
 | `MA_SOURCE` | | The source input to use for MA, e.g. low, high, close, ohlc4, etc. |
-| `MA_LENGTH` | 9 | Moving Average type, e.g. SMA, EMA, ALMA, etc. |
+| `MA_LENGTH` | 9 | Number of candle sticks to include in calculation |
 | `SOURCE` | close |  The source input to use in the strategy, e.g. low, high, close, ohlc4, etc. |
 | `VAMA_FAST_LENGTH` | 3 | Length of fast period in Volatility Adjusted Moving Average. |
 | `VAMA_WEIGHT` | 0.2 | VAMA weight factor. |
@@ -89,6 +89,10 @@ The below parameters are used in the ema.env template.
 | `UB_MA_TYPE` | `MA_TYPE` | Overrides `MA_TYPE`. |
 | `UB_VAMA_FAST_LENGTH` | `VAMA_FAST_LENGTH` | Overrides `VAMA_FAST_LENGTH`. |
 | `UB_VAMA_WEIGHT` | `VAMA_WEIGHT` | Overrides `VAMA_WEIGHT`. |
+| **Position confirmation configuration** |
+| `POSITION_CONFIRMATION` | `Disabled` | Enables confirmation of positions based on selected method, e.g. `RSI` |
+| `POSITION_CONFIRMATION_SOURCE` | `ohlc4` | The source input to use, e.g. low, high, close, ohlc4, etc. |
+| `POSITION_CONFIRMATION_LENGTH` | `10` | Number of candle sticks to include in calculation |
 | **Pyramiding related configuration** |
 | `PYRAMIDING_REBUY_RESISTANCE` | 0.01 | (avg. position price / `LB_LONG_SOURCE` price) >= `PYRAMIDING_REBUY_RESISTANCE` before considering to open new long-position. |
 | `PYRAMIDING_REBUY_USE_POS_AVG_PRICE` | true | When considering to rebuy use the open position's average price instead of the last opened position. |
