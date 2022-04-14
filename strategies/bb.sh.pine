@@ -17,6 +17,7 @@ strategy(shorttitle=${SHORT_TITLE:-'BBS'},
 lbgrp = 'Low Band - Buy'
 ubgrp = 'Upper Band - Sell'
 advgrp = 'Pyramiding'
+rsigrp = 'Position confirmation'
 
 // General Inputs
 longEnabled = input.bool(${LONG_TRADES:-true}, 'Long trades', inline='mode')
@@ -70,6 +71,13 @@ ubShortSource = input.source(${UB_SHORT_SOURCE:-${SOURCE:-close}}, 'Sell source'
 ubShortStrategy = input.string(${UB_SHORT_STRATEGY:-'Price > MA'}, 'Strategy', inline='short1', group=ubgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price > MA'])
 
+// Position confirmation configuration
+confirmationEnabled = input.bool(${CONFIRMATION_ENABLED:-false}, 'Use RSI to confirm position', group=rsigrp)
+rsiSource = input.source(${RSI_SOURCE:-ohlc4}, 'Source', inline='rsi1', group=rsigrp)
+rsiLength = input.int(${RSI_LENGTH:-10}, minval=1, title='Length', inline='rsi1', group=rsigrp)
+rsiUpperBand = input.int(${RSI_UPPER_BAND:-70}, minval=1, title='Upper band', inline='rsi2', group=rsigrp)
+rsiLowerBand = input.int(${RSI_LOWER_BAND:-30}, minval=1, title='Lower band', inline='rsi2', group=rsigrp)
+
 // Advanced configuration options
 rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp)
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', minval=1, group=advgrp)
@@ -121,19 +129,25 @@ ubMovingAverage = switch ubMAType
     => movingAverage(ubMAType, ubMASource, ubMALen)
 upperBand = ubMovingAverage + deviation(ubDevType, ubDevSource, ubDevLen) * ubDevScale
 
+// Position Confirmation Calculation
+rsi = ta.rsi(rsiSource, rsiLength)
+overBought = rsi>rsiUpperBand
+overSold = rsi<rsiLowerBand
+
 // Color Palette
 colorBandLine = color.new(color.gray, 0)
 colorTradeZone = color.new(color.teal, 50)
-p1 = plot(upperBand, 'BB Upper', color=colorBandLine)
-p2 = plot(lowerBand, 'BB Lower', color=colorBandLine)
+colorConfirmation = color.new(color.green, 0)
+p1 = plot(upperBand, 'BB Upper', color = (confirmationEnabled and overBought) ? colorConfirmation : colorBandLine)
+p2 = plot(lowerBand, 'BB Lower', color = (confirmationEnabled and overSold) ? colorConfirmation : colorBandLine)
 fill(p1, p2, color=color.new(color.gray, 80))
 p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
 p4 = plot(ubShortSource, 'Sell', color=colorTradeZone)
 fill(p3, p4, color=colorTradeZone)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
-shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand)
-shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand)
+shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (confirmationEnabled ? overSold : true)
+shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (confirmationEnabled ? overBought : true)
 
 // Make sure consecutive buys/sells improve the average position price
 okOpenLong = na(strategy.position_avg_price) or strategy.position_avg_price >= (lbLongSource * rebuyResistance)
