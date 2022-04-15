@@ -1,7 +1,7 @@
 # Bollinger Band strategy flowchart
 
 ```mermaid
-%%{init: {'theme':'base'}}%%
+%%{init: {'theme':'base', 'themeCSS': '.svg {background-color: white}'}}%%
 flowchart LR
 %% Definition of the components
 
