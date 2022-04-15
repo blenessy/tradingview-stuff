@@ -17,7 +17,8 @@ strategy(shorttitle=${SHORT_TITLE:-'BBS'},
 lbgrp = 'Low Band - Buy'
 ubgrp = 'Upper Band - Sell'
 advgrp = 'Pyramiding'
-cfrmgrp = 'Position confirmation'
+scgrp = 'Short confirmation'
+lcgrp = 'Long confirmation'
 
 // General Inputs
 longEnabled = input.bool(${LONG_TRADES:-true}, 'Long trades', inline='mode')
@@ -50,6 +51,12 @@ lbLongSource = input.source(${LB_LONG_SOURCE:-${SOURCE:-close}}, 'Buy source', i
 lbLongStrategy = input.string(${LB_LONG_STRATEGY:-'Price x-under MA'}, 'Strategy', inline='long1', group=lbgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price < MA'])
 
+// Long position confirmation configuration
+longCfrm = input.string(${LONG_CONFIRMATION:-'Disabled'}, title='Oscillator', inline='lc1', group=lcgrp, options=['Disabled', 'RSI'])
+longCfrmSource = input.source(${LONG_CONFIRMATION_SOURCE:-ohlc4}, 'Source', inline='lc1', group=lcgrp)
+longCfrmLength = input.int(${LONG_CONFIRMATION_LENGTH:-10}, minval=1, title='Length', inline='lc2', group=lcgrp)
+longCfrmLimit = input.int(${LONG_CONFIRMATION_LIMIT:-30}, minval=1, title='Limit', inline='lc2', group=lcgrp)
+
 // BB High configuration
 ubMAType = input.string(${UB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inline='ubma1', group=ubgrp,
      options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
@@ -71,13 +78,11 @@ ubShortSource = input.source(${UB_SHORT_SOURCE:-${SOURCE:-close}}, 'Sell source'
 ubShortStrategy = input.string(${UB_SHORT_STRATEGY:-'Price > MA'}, 'Strategy', inline='short1', group=ubgrp,
      options=['Price x-over MA', 'Price x-under MA', 'Price > MA'])
 
-// Position confirmation configuration
-positionConfirmation = input.string(${POSITION_CONFIRMATION:-'Disabled'}, title='Position confirmation', group=cfrmgrp, 
-    options=['Disabled', 'RSI'])
-cfrmSource = input.source(${POSITION_CONFIRMATION_SOURCE:-ohlc4}, 'Source', inline='cfrm1', group=cfrmgrp)
-cfrmLength = input.int(${POSITION_CONFIRMATION_LENGTH:-10}, minval=1, title='Length', inline='cfrm1', group=cfrmgrp)
-cfrmUpperBand = input.int(${POSITION_CONFIRMATION_UPPER_BAND:-70}, minval=1, title='Upper band', inline='cfrm2', group=cfrmgrp)
-cfrmLowerBand = input.int(${POSITION_CONFIRMATION_LOWER_BAND:-30}, minval=1, title='Lower band', inline='cfrm2', group=cfrmgrp)
+// Short position confirmation configuration
+shortCfrm = input.string(${SHORT_CONFIRMATION:-'Disabled'}, title='Oscillator', inline='sc1', group=scgrp, options=['Disabled', 'RSI'])
+shortCfrmSource = input.source(${SHORT_CONFIRMATION_SOURCE:-ohlc4}, 'Source', inline='sc1', group=scgrp)
+shortCfrmLength = input.int(${SHORT_CONFIRMATION_LENGTH:-10}, minval=1, title='Length', inline='sc2', group=scgrp)
+shortCfrmLimit = input.int(${SHORT_CONFIRMATION_LIMIT:-70}, minval=1, title='Limit', inline='sc2', group=scgrp)
 
 // Advanced configuration options
 rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp, inline='rebuy')
@@ -131,20 +136,29 @@ ubMovingAverage = switch ubMAType
     => movingAverage(ubMAType, ubMASource, ubMALen)
 upperBand = ubMovingAverage + deviation(ubDevType, ubDevSource, ubDevLen) * ubDevScale
 
-// Position Confirmation Calculation
-confirmationEnabled = positionConfirmation == 'Disabled' ? false : true
-confirmationSignal = switch positionConfirmation
-    'RSI' => ta.rsi(cfrmSource, cfrmLength)
+// Short Confirmation Calculation
+shortCfrmEnabled = shortCfrm == 'Disabled' ? false : true
+shortCfrmSignal = switch shortCfrm
+    'RSI' => ta.rsi(shortCfrmSource, shortCfrmLength)
+    => na
+//overBought
+shortConfirmed = shortCfrmEnabled and (shortCfrmSignal > shortCfrmLimit)
 
-overBought = confirmationSignal>cfrmUpperBand
-overSold = confirmationSignal<cfrmLowerBand
+// Long Confirmation Calculation
+longCfrmEnabled = longCfrm == 'Disabled' ? false : true
+longCfrmSignal = switch longCfrm
+    'RSI' => ta.rsi(longCfrmSource, longCfrmLength)
+    => na
+//overSold
+longConfirmed = longCfrmEnabled and (longCfrmSignal < longCfrmLimit)
+
 
 // Color Palette
 colorBandLine = color.new(color.gray, 0)
 colorTradeZone = color.new(color.teal, 50)
 colorConfirmation = color.new(color.green, 0)
-p1 = plot(upperBand, 'BB Upper', color = (confirmationEnabled and overBought) ? colorConfirmation : colorBandLine)
-p2 = plot(lowerBand, 'BB Lower', color = (confirmationEnabled and overSold) ? colorConfirmation : colorBandLine)
+p1 = plot(upperBand, 'BB Upper', color = shortConfirmed ? colorConfirmation : colorBandLine)
+p2 = plot(lowerBand, 'BB Lower', color = longConfirmed ? colorConfirmation : colorBandLine)
 fill(p1, p2, color=color.new(color.gray, 80))
 p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
 p4 = plot(ubShortSource, 'Sell', color=colorTradeZone)
@@ -164,8 +178,8 @@ if barstate.islastconfirmedhistory
     table.cell(tbl, 0, 0, 'ⓘ', text_color = color.blue, tooltip=summary)
 
 // isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
-shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (confirmationEnabled ? overSold : true)
-shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (confirmationEnabled ? overBought : true)
+shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (longCfrmEnabled ? longConfirmed : true)
+shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (shortCfrmEnabled ? shortConfirmed : true)
 
 // Make sure consecutive buys/sells improve the average position price
 rebuyPrice = rebuyUsePosAvgPrice ? strategy.position_avg_price : strategy.opentrades.entry_price(strategy.opentrades - 1)
