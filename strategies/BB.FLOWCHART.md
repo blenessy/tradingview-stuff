@@ -5,40 +5,40 @@ flowchart LR
 %% Definition of the components
 
 %% Lower Band components
-lbSource(Source)
+lbSource(LB MA Source)
 lbMA(Moving Average)
-lbDeviationSource(Deviation Source)
+lbDeviationSource(LB Deviation Source)
 lbDeviationMA(Deviation MA)
 lbDecision{+}
 
 %% Upper Band components
-ubSource(Source)
+ubSource(UB MA Source)
 ubMA(Moving Average)
-ubDeviationSource(Deviation Source)
+ubDeviationSource(UB Deviation Source)
 ubDeviationMA(Deviation MA)
 ubDecision{+}
 
-shouldLong{Should \n Long}
-shouldShort{Should \n Short}
+shouldLong{Should\nLong}
+shouldShort{Should\nShort}
 
 %% Long position confirmation components
-longSource(Source)
+longSource(Long Source)
+longOscSource(Long Conf Source)
 longOscillator(Oscillator)
 longMA(Moving Average)
+longJoinMA{ }
 
 %% Short position confirmation components
-shortSource(Source)
+shortSource(Short Source)
+shortOscSource(Short Conf Source)
 shortOscillator(Oscillator)
 shortMA(Moving Average)
+shortJoinMA{ }
 
-%% Generic position confirmation components
-cfrmSource(Source)
-cfrmOscillator(Oscillator)
-cfrmOscillatorMA(Moving Average)
-cfrmPosition{Position \n Confirmed}
-
-takePosition(Take Position)
-style takePosition fill:#0f9
+takeShortPosition(Take Short Position)
+takeLongPosition(Take Long Position)
+style takeShortPosition fill:#0f9
+style takeLongPosition fill:#0f9
 
 %% Long position decision flow
 subgraph Long Decision Flow
@@ -52,11 +52,14 @@ subgraph Long Decision Flow
 
     subgraph Long Position Confirmation
         direction LR
-        longSource --> longOscillator --> longMA
+        longOscSource --> longOscillator
+        longOscillator --> longMA --> longJoinMA
+        longOscillator -- MA disabled --> longJoinMA
     end
 
-    lbDecision -- Yes --> shouldLong
-    longMA --> shouldLong    
+    lbDecision --> shouldLong
+    longJoinMA --> shouldLong
+    longSource --> shouldLong
 end
 
 %% Short position decision flow
@@ -70,22 +73,15 @@ subgraph Short Decision Flow
 
     subgraph Short Position Confirmation
         direction LR
-        shortSource --> shortOscillator --> shortMA
+        shortOscSource --> shortOscillator
+        shortOscillator --> shortMA --> shortJoinMA
+        shortOscillator -- MA disabled --> shortJoinMA
     end
 
     ubDecision --> shouldShort
-    shortMA --> shouldShort
+    shortJoinMA --> shouldShort
+    shortSource --> shouldShort
 end
 
-%% Position Confirmation
-subgraph Position Confirmation
-    direction LR
-
-    cfrmSource --> cfrmOscillator --> cfrmPosition
-    cfrmOscillator -- optional --> cfrmOscillatorMA -- optional --> cfrmPosition
-
-end
-
-shouldShort -- "Yes" --> takePosition
-shouldLong -- "Yes" --> takePosition
-cfrmPosition -- "Yes" --> takePosition
+shouldShort -- "Yes" --> takeShortPosition
+shouldLong -- "Yes" --> takeLongPosition
