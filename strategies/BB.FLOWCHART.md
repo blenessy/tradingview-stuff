@@ -1,6 +1,7 @@
 # Bollinger Band strategy flowchart
 
 ```mermaid
+%%{init: {'theme':'base'}}%%
 flowchart LR
 %% Definition of the components
 
@@ -9,14 +10,14 @@ lbSource(LB MA Source)
 lbMA(Moving Average)
 lbDeviationSource(LB Deviation Source)
 lbDeviationMA(Deviation MA)
-lbDecision{+}
+lbDecision((+))
 
 %% Upper Band components
 ubSource(UB MA Source)
 ubMA(Moving Average)
 ubDeviationSource(UB Deviation Source)
 ubDeviationMA(Deviation MA)
-ubDecision{+}
+ubDecision((+))
 
 shouldLong{Should\nLong}
 shouldShort{Should\nShort}
@@ -39,8 +40,8 @@ shortJoinMA{ }
 
 takeShortPosition(Take Short Position)
 takeLongPosition(Take Long Position)
-style takeShortPosition fill:#0f9
-style takeLongPosition fill:#0f9
+style takeShortPosition fill:#390
+style takeLongPosition fill:#390
 
 %% Long position decision flow
 subgraph Long Decision Flow
@@ -48,8 +49,8 @@ subgraph Long Decision Flow
 
     subgraph Lower Band
         direction LR
-        lbSource --> lbMA --> lbDecision
-        lbDeviationSource --> lbDeviationMA --> lbDecision
+        lbSource ----> lbMA --> lbDecision
+        lbDeviationSource ----> lbDeviationMA --> lbDecision
     end
 
     subgraph Long Position Confirmation
@@ -62,7 +63,7 @@ subgraph Long Decision Flow
 
     lbDecision --> shouldLong
     longJoinMA --> shouldLong
-    longSource --> shouldLong
+    longSource ------> shouldLong
 end
 
 %% Short position decision flow
@@ -70,8 +71,8 @@ subgraph Short Decision Flow
     direction LR
     subgraph Upper Band
         direction LR
-        ubSource --> ubMA --> ubDecision
-        ubDeviationSource --> ubDeviationMA --> ubDecision
+        ubSource ----> ubMA --> ubDecision
+        ubDeviationSource ----> ubDeviationMA --> ubDecision
     end
 
     subgraph Short Position Confirmation
@@ -84,7 +85,7 @@ subgraph Short Decision Flow
 
     ubDecision --> shouldShort
     shortJoinMA --> shouldShort
-    shortSource --> shouldShort
+    shortSource ------> shouldShort
 end
 
 shouldShort -- "Yes" --> takeShortPosition
