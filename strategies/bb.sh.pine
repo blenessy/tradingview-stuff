@@ -214,32 +214,37 @@ if barstate.islastconfirmedhistory
     tbl = table.new(position.top_right, 1, 1)
     table.cell(tbl, 0, 0, 'ⓘ', text_color = color.blue, tooltip=summary)
 
-// isBuyEvent/isSellEvent is used to prevent re-triggering of alerts
+// calculate the profit as it stands right now
+profitPercent = strategy.opentrades > 0 ? 100 * (close / strategy.position_avg_price - 1) : .0
+
+// determine whether it is a good idea to enter long/short positions
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (longCfrmEnabled ? longConfirmed : true)
 shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (shortCfrmEnabled ? shortConfirmed : true)
 
+// -- must close positions here --
+
+// reduce position - only effective if there are any positions with the corresponding id
+strategy.close('average down', comment='reduce long', when=(close >= strategy.position_avg_price))
+strategy.close('average up', comment='reduce short', when=(close <= strategy.position_avg_price))
+
+// take profit
+strategy.close('buy', when=shouldSell or profitPercent >= takeProfitPercent,
+     comment=str.format('{0}: {1}%', profitPercent >= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
+strategy.close('sell', when=shouldBuy or profitPercent <= -takeProfitPercent,
+     comment=str.format('{0}: {1}%', profitPercent <= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
+
+// -- open positions here --
+
+// GOTCHA: strategy.opentrades* is NOT updated by strategy.close
+
 // Make sure consecutive buys/sells improve the average position price
 rebuyPrice = rebuyUsePosAvgPrice ? strategy.position_avg_price : strategy.opentrades.entry_price(strategy.opentrades - 1)
-okOpenLong = strategy.opentrades == 0 or rebuyPrice >= (lbLongSource * rebuyResistance)
-okOpenShort = strategy.opentrades == 0 or rebuyPrice >= (rebuyResistance / ubShortSource)
+okOpenLong = longEnabled and time > backtestStart and (na(rebuyPrice) or rebuyPrice >= (lbLongSource * rebuyResistance))
+okOpenShort = shortEnabled and time > backtestStart and (na(rebuyPrice) or rebuyPrice >= (rebuyResistance / ubShortSource))
 
-// reduce position
-strategy.close('average down', comment='reduce long',
-     when=longEnabled and close >= strategy.position_avg_price)
-strategy.close('average up', comment='reduce short',
-     when=shortEnabled and close <= strategy.position_avg_price)
-
-// profit
-profitPercent = 100 * (close / strategy.position_avg_price - 1)
-absProfitPercent = math.round(math.abs(profitPercent), 2)
-buyVerdict = str.format('{0}: {1}%', profitPercent >= 0 ? 'profit' : 'loss', absProfitPercent)
-strategy.close('buy', comment=buyVerdict, when=longEnabled and (shouldSell or profitPercent >= takeProfitPercent))
-sellVerdict = str.format('{0}: {1}%', profitPercent <= 0 ? 'profit' : 'loss', absProfitPercent)
-strategy.close('sell', comment=sellVerdict, when=shortEnabled and (shouldBuy or profitPercent <= -takeProfitPercent))
-
-// start trading
-strategy.entry(strategy.opentrades >= irreduciblePositions ? 'average down' : 'buy', strategy.long,
-     when=longEnabled and (time > backtestStart and okOpenLong and shouldBuy))
-strategy.entry(strategy.opentrades >= irreduciblePositions ? 'average up' : 'sell', strategy.short,
-     when=shortEnabled and (time > backtestStart and okOpenShort and shouldSell))
+// increase position
+longId = strategy.opentrades.entry_id(0) == 'buy' and strategy.opentrades >= irreduciblePositions ? 'average down' : 'buy'
+strategy.entry(longId, strategy.long, when=okOpenLong and shouldBuy)
+shortId = strategy.opentrades.entry_id(0) == 'sell' and strategy.opentrades >= irreduciblePositions ? 'average up' : 'sell'
+strategy.entry(shortId, strategy.short, when=okOpenShort and shouldSell)
 EOF
