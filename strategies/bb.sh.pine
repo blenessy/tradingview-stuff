@@ -61,6 +61,13 @@ longCfrmSource = input.source(${LONG_CONFIRMATION_SOURCE:-ohlc4}, 'Source', inli
 longCfrmLength = input.int(${LONG_CONFIRMATION_LENGTH:-10}, minval=1, title='Length', inline='lc2', group=lcgrp)
 longCfrmLimit = input.int(${LONG_CONFIRMATION_LIMIT:-30}, minval=1, title='Limit', inline='lc2', group=lcgrp)
 
+lcMAType = input.string(${LC_MA_TYPE:-'Disabled'}, 'Moving average', inline='lcma', group=lcgrp, options=['Disabled', 'ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+lcMALength = input.int(${LC_MA_TYPE:-5}, 'MA length', step=1, minval=3, inline='lcma', group=lcgrp)
+lcAlmaOffset = ${LC_ALMA_INPUT_PREFIX:-input.}float(${LC_ALMA_OFFSET:-0.85}, 'ALMA offset', step=.01, minval=.01, inline='lcalma', group=lcgrp)
+lcAlmaSigma = ${LC_ALMA_INPUT_PREFIX:-input.}float(${LC_ALMA_SIGMA:-6.0}, 'ALMA sigma', step=.1, minval=.1, inline='lcalma', group=lcgrp)
+lcVamaFastLength = ${LC_VAMA_INPUT_PREFIX:-hidden_input_}int(${LC_VAMA_FAST_LENGTH:-3}, 'VAMA fast length', step=1, minval=2, inline='lcvama', group=lcgrp)
+lcVamaWeight = ${LC_VAMA_INPUT_PREFIX:-hidden_input_}float(${LC_VAMA_WEIGHT:-.2}, 'VAMA weight', step=.01, minval=.01, inline='lcvama', group=lcgrp)
+
 // BB High configuration
 ubMAType = input.string(${UB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inline='ubma1', group=ubgrp,
      options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
@@ -87,6 +94,13 @@ shortCfrm = input.string(${SHORT_CONFIRMATION:-'Disabled'}, title='Oscillator', 
 shortCfrmSource = input.source(${SHORT_CONFIRMATION_SOURCE:-ohlc4}, 'Source', inline='sc1', group=scgrp)
 shortCfrmLength = input.int(${SHORT_CONFIRMATION_LENGTH:-10}, minval=1, title='Length', inline='sc2', group=scgrp)
 shortCfrmLimit = input.int(${SHORT_CONFIRMATION_LIMIT:-70}, minval=1, title='Limit', inline='sc2', group=scgrp)
+
+scMAType = input.string(${SC_MA_TYPE:-'Disabled'}, 'Moving average', inline='scma', group=scgrp, options=['Disabled', 'ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+scMALength = input.int(${SC_MA_TYPE:-5}, 'MA length', step=1, minval=3, inline='scma', group=scgrp)
+scAlmaOffset = ${SC_ALMA_INPUT_PREFIX:-input.}float(${SC_ALMA_OFFSET:-0.85}, 'ALMA offset', step=.01, minval=.01, inline='scalma', group=scgrp)
+scAlmaSigma = ${SC_ALMA_INPUT_PREFIX:-input.}float(${SC_ALMA_SIGMA:-6.0}, 'ALMA sigma', step=.1, minval=.1, inline='scalma', group=scgrp)
+scVamaFastLength = ${SC_VAMA_INPUT_PREFIX:-hidden_input_}int(${SC_VAMA_FAST_LENGTH:-3}, 'VAMA fast length', step=1, minval=2, inline='scvama', group=scgrp)
+scVamaWeight = ${SC_VAMA_INPUT_PREFIX:-hidden_input_}float(${SC_VAMA_WEIGHT:-.2}, 'VAMA weight', step=.01, minval=.01, inline='scvama', group=scgrp)
 
 // Advanced configuration options
 rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp, inline='rebuy')
@@ -140,7 +154,7 @@ ubMovingAverage = switch ubMAType
     => movingAverage(ubMAType, ubMASource, ubMALen)
 upperBand = ubMovingAverage + deviation(ubDevType, ubDevSource, ubDevLen) * ubDevScale
 
-// Short Confirmation Calculation
+// Short Confirmation Calculation - Oscillator step
 shortCfrmEnabled = shortCfrm == 'Disabled' ? false : true
 shortCfrmSignal = switch shortCfrm
     'RSI' => ta.rsi(shortCfrmSource, shortCfrmLength)
@@ -148,7 +162,17 @@ shortCfrmSignal = switch shortCfrm
 //overBought
 shortConfirmed = shortCfrmEnabled and (shortCfrmSignal > shortCfrmLimit)
 
-// Long Confirmation Calculation
+// Short confirmation calculation - MA step
+scMAEnabled = scMAType == 'Disabled' ? false : shortCfrmEnabled ? true : false
+scMASource = shortCfrmEnabled ? shortCfrmSignal : na
+scMASignal = switch scMAType
+    'ALMA' => ta.alma(scMASource, scMALength, scAlmaOffset, scAlmaSigma)
+    'VAMA' => vama(scMASource, scMALength, scVamaFastLength, scVamaWeight)
+    => movingAverage(scMAType, scMASource, scMALength)
+
+shortConfirmed := scMAEnabled ? (scMASignal < shortCfrmLimit) : shortConfirmed
+
+// Long Confirmation Calculation - Oscillator step
 longCfrmEnabled = longCfrm == 'Disabled' ? false : true
 longCfrmSignal = switch longCfrm
     'RSI' => ta.rsi(longCfrmSource, longCfrmLength)
@@ -156,6 +180,15 @@ longCfrmSignal = switch longCfrm
 //overSold
 longConfirmed = longCfrmEnabled and (longCfrmSignal < longCfrmLimit)
 
+// Long confirmation calculation - MA step
+lcMAEnabled = lcMAType == 'Disabled' ? false : longCfrmEnabled ? true : false
+lcMASource = longCfrmEnabled ? longCfrmSignal : na
+lcMASignal = switch lcMAType
+    'ALMA' => ta.alma(lcMASource, lcMALength, lcAlmaOffset, lcAlmaSigma)
+    'VAMA' => vama(lcMASource, lcMALength, lcVamaFastLength, lcVamaWeight)
+    => movingAverage(lcMAType, lcMASource, lcMALength)
+
+longConfirmed := lcMAEnabled ? (lcMASignal < longCfrmLimit) : longConfirmed
 
 // Color Palette
 colorBandLine = color.new(color.gray, 0)
