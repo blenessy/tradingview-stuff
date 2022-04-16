@@ -13,6 +13,10 @@ strategy(shorttitle=${SHORT_TITLE:-'BBS'},
       default_qty_type=${QTY_TYPE:-strategy.cash},
       default_qty_value=${QTY_SIZE:-100})
 
+// hidden input.8 functions, which just return the default value
+hidden_input_float(defval, title='', minval=0, maxval=0, step=0, tooltip='', inline='', group='', confirm='') => defval
+hidden_input_int(defval, title='', minval=0, maxval=0, step=0, tooltip='', inline='', group='', confirm='') => defval
+
 // Group names
 lbgrp = 'Low Band - Buy'
 ubgrp = 'Upper Band - Sell'
@@ -36,11 +40,11 @@ lbMAType = input.string(${LB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inli
 lbMALen = input.int(${LB_MA_LENGTH:-${MA_LENGTH:-9}}, 'MA length', step=1, minval=3, inline='lbma1', group=lbgrp)
 lbMASource = input.source(${LB_MA_SOURCE:-${MA_SOURCE:-low}}, 'MA source', group=lbgrp)
 
-lbAlmaOffset = input.float(${LB_ALMA_OFFSET:-${ALMA_OFFSET:-.85}}, 'ALMA offset', step=.01, minval=.01, inline='lbalma', group=lbgrp)
-lbAlmaSigma = input.float(${LB_ALMA_SIGMA:-${ALMA_SIGMA:-6}}, 'ALMA sigma', step=.1, minval=.1, inline='lbalma', group=lbgrp)
+lbAlmaOffset = ${LB_ALMA_INPUT_PREFIX:-hidden_input_}float(${LB_ALMA_OFFSET:-${ALMA_OFFSET:-.85}}, 'ALMA offset', step=.01, minval=.01, inline='lbalma', group=lbgrp)
+lbAlmaSigma = ${LB_ALMA_INPUT_PREFIX:-hidden_input_}float(${LB_ALMA_SIGMA:-${ALMA_SIGMA:-6}}, 'ALMA sigma', step=.1, minval=.1, inline='lbalma', group=lbgrp)
 
-lbVamaFastLen = input.int(${LB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', step=1, minval=2, inline='lbvama', group=lbgrp)
-lbVamaWeight = input.float(${LB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='lbvama', group=lbgrp)
+lbVamaFastLen = ${LB_VAMA_INPUT_PREFIX:-hidden_input_}int(${LB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', step=1, minval=2, inline='lbvama', group=lbgrp)
+lbVamaWeight = ${LB_VAMA_INPUT_PREFIX:-hidden_input_}float(${LB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='lbvama', group=lbgrp)
 
 lbDevType = input.string(${LB_DEV_TYPE:-${DEV_TYPE:-'STD'}}, 'Deviation', options=['STD', 'MEAN'], inline='lbdev1', group=lbgrp)
 lbDevLen = input.int(${LB_DEV_LENGTH:-${LB_MA_LENGTH:-${MA_LENGTH:-9}}}, 'Dev. length', step=1, minval=3, inline='lbdev1', group=lbgrp)
@@ -63,11 +67,11 @@ ubMAType = input.string(${UB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inli
 ubMALen = input.int(${UB_MA_LENGTH:-${MA_LENGTH:-9}}, 'MA length', step=1, minval=3, inline='ubma1', group=ubgrp)
 ubMASource = input.source(${UB_MA_SOURCE:-${MA_SOURCE:-high}}, 'MA source', group=ubgrp)
 
-ubAlmaOffset = input.float(${UB_ALMA_OFFSET:-${ALMA_OFFSET:-.85}}, 'ALMA offset', step=.01, minval=.01, inline='ubalma', group=ubgrp)
-ubAlmaSigma = input.float(${UB_ALMA_SIGMA:-${ALMA_SIGMA:-6}}, 'ALMA sigma', step=.1, minval=.1, inline='ubalma', group=ubgrp)
+ubAlmaOffset = ${UB_ALMA_INPUT_PREFIX:-hidden_input_}float(${UB_ALMA_OFFSET:-${ALMA_OFFSET:-.85}}, 'ALMA offset', step=.01, minval=.01, inline='ubalma', group=ubgrp)
+ubAlmaSigma = ${UB_ALMA_INPUT_PREFIX:-hidden_input_}float(${UB_ALMA_SIGMA:-${ALMA_SIGMA:-6}}, 'ALMA sigma', step=.1, minval=.1, inline='ubalma', group=ubgrp)
 
-ubVamaFastLen = input.int(${UB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', step=1, minval=2, inline='ubvama', group=ubgrp)
-ubVamaWeight = input.float(${UB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='ubvama', group=ubgrp)
+ubVamaFastLen = ${UB_VAMA_INPUT_PREFIX:-hidden_input_}int(${UB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', step=1, minval=2, inline='ubvama', group=ubgrp)
+ubVamaWeight = ${UB_VAMA_INPUT_PREFIX:-hidden_input_}float(${UB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='ubvama', group=ubgrp)
 
 ubDevType = input.string(${UB_DEV_TYPE:-${DEV_TYPE:-'STD'}}, 'Deviation', options=['STD', 'MEAN'], inline='ubdev1', group=ubgrp)
 ubDevLen = input.int(${UB_DEV_LENGTH:-${UB_MA_LENGTH:-${MA_LENGTH:-9}}}, 'Dev. length', step=1, minval=3, inline='ubdev1', group=ubgrp)
