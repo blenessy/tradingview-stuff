@@ -188,7 +188,7 @@ shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (shor
 // Make sure consecutive buys/sells improve the average position price
 rebuyPrice = rebuyUsePosAvgPrice ? strategy.position_avg_price : strategy.opentrades.entry_price(strategy.opentrades - 1)
 okOpenLong = strategy.opentrades == 0 or rebuyPrice >= (lbLongSource * rebuyResistance)
-okOpenShort = strategy.opentrades == 0 or rebuyPrice <= (rebuyResistance / ubShortSource)
+okOpenShort = strategy.opentrades == 0 or rebuyPrice >= (rebuyResistance / ubShortSource)
 
 // reduce position
 strategy.close('average down', comment='reduce long',
