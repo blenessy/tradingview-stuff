@@ -108,6 +108,11 @@ The below parameters are used in the ema.env template.
 | `UB_ALMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
 | `LB_VAMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
 | `UB_VAMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
+| `SC_ALMA_INPUT_PREFIX` | input. | Set to `hidden_input_` if you want the args to be hidden in the configuration (Inputs tab). |
+| `LC_ALMA_INPUT_PREFIX` | input. | Set to `hidden_input_` if you want the args to be hidden in the configuration (Inputs tab). |
+| `SC_VAMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
+| `LC_VAMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
+
 
 # What is [FTX](https://ftx.com/)?
 
