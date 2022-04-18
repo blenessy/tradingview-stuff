@@ -46,7 +46,7 @@ lbAlmaSigma = ${LB_ALMA_INPUT_PREFIX:-hidden_input_}float(${LB_ALMA_SIGMA:-${ALM
 lbVamaFastLen = ${LB_VAMA_INPUT_PREFIX:-hidden_input_}int(${LB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', step=1, minval=2, inline='lbvama', group=lbgrp)
 lbVamaWeight = ${LB_VAMA_INPUT_PREFIX:-hidden_input_}float(${LB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='lbvama', group=lbgrp)
 
-lbDevType = input.string(${LB_DEV_TYPE:-${DEV_TYPE:-'STD'}}, 'Deviation', options=['STD', 'MEAN'], inline='lbdev1', group=lbgrp)
+lbDevType = ${LB_DEV_TYPE:-${DEV_TYPE:-'STD'}}
 lbDevLen = input.int(${LB_DEV_LENGTH:-${LB_MA_LENGTH:-${MA_LENGTH:-9}}}, 'Dev. length', step=1, minval=3, inline='lbdev1', group=lbgrp)
 lbDevSource = input.source(${LB_DEV_SOURCE:-${LB_MA_SOURCE:-${MA_SOURCE:-low}}}, 'Dev. source', inline='lbdev2', group=lbgrp)
 lbDevScale =  input.float(${LB_DEV_SCALE:-${DEV_SCALE:-2}}, 'Dev. scale factor', minval=.01, maxval=50, step=.05, inline='lbdev2', group=lbgrp)
@@ -80,7 +80,7 @@ ubAlmaSigma = ${UB_ALMA_INPUT_PREFIX:-hidden_input_}float(${UB_ALMA_SIGMA:-${ALM
 ubVamaFastLen = ${UB_VAMA_INPUT_PREFIX:-hidden_input_}int(${UB_VAMA_FAST_LENGTH:-${VAMA_FAST_LENGTH:-3}}, 'VAMA fast length', step=1, minval=2, inline='ubvama', group=ubgrp)
 ubVamaWeight = ${UB_VAMA_INPUT_PREFIX:-hidden_input_}float(${UB_VAMA_WEIGHT:-${VAMA_WEIGHT:-.2}}, 'VAMA weight', step=.01, minval=.01, inline='ubvama', group=ubgrp)
 
-ubDevType = input.string(${UB_DEV_TYPE:-${DEV_TYPE:-'STD'}}, 'Deviation', options=['STD', 'MEAN'], inline='ubdev1', group=ubgrp)
+ubDevType = ${UB_DEV_TYPE:-${DEV_TYPE:-'STD'}}
 ubDevLen = input.int(${UB_DEV_LENGTH:-${UB_MA_LENGTH:-${MA_LENGTH:-9}}}, 'Dev. length', step=1, minval=3, inline='ubdev1', group=ubgrp)
 ubDevSource = input.source(${UB_DEV_SOURCE:-${UB_MA_SOURCE:-${MA_SOURCE:-high}}}, 'Dev. source', inline='ubdev2', group=ubgrp)
 ubDevScale =  input.float(${UB_DEV_SCALE:-${DEV_SCALE:-2}}, 'Dev. scale factor', minval=.01, maxval=50, step=.05, inline='ubdev2', group=ubgrp)
