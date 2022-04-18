@@ -5,7 +5,7 @@ set -e
 cat <<EOF
 //@version=5
 strategy(shorttitle=${SHORT_TITLE:-'BBS'},
-      title=${TITLE:-'Bollinger Bands Strategy'},
+      title=${TITLE:-${SHORT_TITLE:-'BBS'}},
       overlay=true,
       pyramiding=${PYRAMIDING:-1},
       initial_capital=${INITIAL_CAPITAL:-1000},
