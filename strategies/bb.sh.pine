@@ -106,7 +106,7 @@ scVamaWeight = ${SC_VAMA_INPUT_PREFIX:-hidden_input_}float(${SC_VAMA_WEIGHT:-.2}
 rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp, inline='rebuy')
 rebuyUsePosAvgPrice = input.bool(${PYRAMIDING_REBUY_USE_POS_AVG_PRICE:-true}, 'Use pos. average price', group=advgrp, inline='rebuy')
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', step=1, minval=1, group=advgrp)
-takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-1000}, 'Take profit %', minval=.1, step=1, group=advgrp)
+takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-1000}, 'Take profit %', minval=.1, step=.2, group=advgrp)
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
 vama(src, dev1Len, dev2Len, scale) =>
@@ -238,9 +238,9 @@ strategy.close('sell', when=shouldBuy or profitPercent <= -takeProfitPercent,
 // GOTCHA: strategy.opentrades* is NOT updated by strategy.close
 
 // Make sure consecutive buys/sells improve the average position price
-rebuyPrice = rebuyUsePosAvgPrice ? strategy.position_avg_price : strategy.opentrades.entry_price(strategy.opentrades - 1)
-okOpenLong = longEnabled and time > backtestStart and (na(rebuyPrice) or rebuyPrice >= (lbLongSource * rebuyResistance))
-okOpenShort = shortEnabled and time > backtestStart and (na(rebuyPrice) or rebuyPrice >= (rebuyResistance / ubShortSource))
+posPrice = rebuyUsePosAvgPrice ? strategy.position_avg_price : strategy.opentrades.entry_price(strategy.opentrades - 1)
+okOpenLong = longEnabled and time > backtestStart and (na(posPrice) or (posPrice / close) >= rebuyResistance)
+okOpenShort = shortEnabled and time > backtestStart and (na(posPrice) or (close / posPrice) >= rebuyResistance)
 
 // increase position
 longId = strategy.opentrades.entry_id(0) == 'buy' and strategy.opentrades >= irreduciblePositions ? 'average down' : 'buy'
