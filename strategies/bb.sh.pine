@@ -108,7 +108,8 @@ scVamaWeight = ${SC_VAMA_INPUT_PREFIX:-hidden_input_}float(${SC_VAMA_WEIGHT:-.2}
 rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp, inline='rebuy')
 rebuyUsePosAvgPrice = input.bool(${PYRAMIDING_REBUY_USE_POS_AVG_PRICE:-true}, 'Use pos. average price', group=advgrp, inline='rebuy')
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', step=1, minval=1, group=advgrp)
-takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-1000}, 'Take profit %', minval=.1, step=.2, group=advgrp)
+takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-100}, 'Take profit %', minval=.1, step=.2, group=advgrp, inline='rr')
+stopLossPercent = input.float(${STOP_LOSS_PERCENT:-100}, 'Stop loss %', minval=.1, step=.2, group=advgrp, inline='rr')
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
 vama(src, dev1Len, dev2Len, scale) =>
@@ -230,9 +231,9 @@ strategy.close('average down', comment='reduce long', when=(close >= strategy.po
 strategy.close('average up', comment='reduce short', when=(close <= strategy.position_avg_price))
 
 // take profit
-strategy.close('buy', when=shouldSell or profitPercent >= takeProfitPercent,
+strategy.close('buy', when=(shouldSell or profitPercent >= takeProfitPercent or profitPercent <= -stopLossPercent),
      comment=str.format('{0}: {1}%', profitPercent >= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
-strategy.close('sell', when=shouldBuy or profitPercent <= -takeProfitPercent,
+strategy.close('sell', when=(shouldBuy or profitPercent <= -takeProfitPercent or profitPercent >= stopLossPercent),
      comment=str.format('{0}: {1}%', profitPercent <= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
 
 // -- open positions here --
@@ -246,7 +247,7 @@ okOpenShort = shortEnabled and time > backtestStart and (na(posPrice) or (close 
 
 // increase position
 longId = strategy.opentrades.entry_id(0) == 'buy' and strategy.opentrades >= irreduciblePositions ? 'average down' : 'buy'
-strategy.entry(longId, strategy.long, when=okOpenLong and shouldBuy)
+strategy.entry(longId, strategy.long, when=(okOpenLong and shouldBuy))
 shortId = strategy.opentrades.entry_id(0) == 'sell' and strategy.opentrades >= irreduciblePositions ? 'average up' : 'sell'
-strategy.entry(shortId, strategy.short, when=okOpenShort and shouldSell)
+strategy.entry(shortId, strategy.short, when=(okOpenShort and shouldSell))
 EOF
