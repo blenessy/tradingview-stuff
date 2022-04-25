@@ -50,6 +50,7 @@ The below parameters are used in the ema.env template.
 | `SHORT_TRADES` | true | Whether to enable short (selling) trades |
 | `TITLE` | 'Bollinger Bands Strategy' | Strategy title |
 | `TAKE_PROFIT_PERCENT` | 1000 | When to close a winning position. |
+| `TRADE_START` | `BACKTEST_START` | The start date for trading in UTC format, e.g. '2022-04-01T00:00:00'. Perticularly useful if `QTY_TYPE` = strategy.percent_of_equity. |
 | **Bollinger Bands common configuration** |
 | `ALMA_OFFSET` | 0.85 | Arnoud Legoux Moving Average offset parameter. Controls tradeoff between smoothness (closer to 1) and responsiveness (closer to 0). |
 | `ALMA_SIGMA` | 6 | Changes the smoothness of ALMA. The larger sigma the smoother ALMA. |

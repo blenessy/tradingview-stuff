@@ -32,7 +32,9 @@ if not devMode and timeframe.period != ${CHART_TIMEFRAME:-'60'}
     runtime.error('expecting chart timeframe: ' + ${CHART_TIMEFRAME:-'60'})
 if not devMode and syminfo.tickerid != ${CHART_TICKERID:-'FTX:BTCPERP'}
     runtime.error('expecting tickerid: ' + ${CHART_TICKERID:-'FTX:BTCPERP'})
-backtestStart = input.time(timestamp(${BACKTEST_START:-'2021-04-01T00:00:00'}), 'Backtest start')
+backtestStart = devMode ?
+     input.time(timestamp(${BACKTEST_START:-'2021-04-01T00:00:00'}), 'Backtest start') :
+     input.time(timestamp(${TRADE_START:-${BACKTEST_START:-'2021-04-01T00:00:00'}}), 'Trade start')
 
 // BB Low configuration
 lbMAType = input.string(${LB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inline='lbma1', group=lbgrp,
