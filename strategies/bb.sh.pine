@@ -215,10 +215,11 @@ if barstate.islastconfirmedhistory
     prettyMonth = (month(t0) > 9 ? '' : '0') + str.tostring(month(t0))
     prettyDay = (dayofmonth(t0) > 9 ? '' : '0') + str.tostring(dayofmonth(t0))
     profitPerDay = nz(strategy.netprofit) / ((t1 - t0) / 86400000)
-    summary = str.format('First trade date: {0}-{1}-{2}\nDaily profit: \${3}\nPosition average price: \${4}',
+    summary = str.format('First trade date: {0}-{1}-{2}\nDaily profit: \${3}\nPosition average price: \${4}\nUnrealized profit/loss: \${5}',
          str.tostring(year(t0)), prettyMonth, prettyDay,
          math.round(profitPerDay, 2),
-         math.round(nz(strategy.position_avg_price), 2))
+         math.round(nz(strategy.position_avg_price), 2),
+         math.round(nz(strategy.openprofit), 2))
     tbl = table.new(position.top_right, 1, 1)
     table.cell(tbl, 0, 0, 'ⓘ', text_color = color.blue, tooltip=summary)
 
