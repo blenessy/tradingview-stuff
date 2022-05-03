@@ -110,6 +110,8 @@ rebuyUsePosAvgPrice = input.bool(${PYRAMIDING_REBUY_USE_POS_AVG_PRICE:-true}, 'U
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', step=1, minval=1, group=advgrp)
 takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-100}, 'Take profit %', minval=.1, step=.2, group=advgrp, inline='rr')
 stopLossPercent = input.float(${STOP_LOSS_PERCENT:-100}, 'Stop loss %', minval=.1, step=.2, group=advgrp, inline='rr')
+barsLimitEnabled = input.bool(${BARS_LIMIT_ENABLED:-false}, 'Limit max bars in entry', group=advgrp, inline='bars')
+barsLimit = input.int(${BARS_LIMIT:-100}, '', step=1, minval=1, group=advgrp, inline='bars')
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
 vama(src, dev1Len, dev2Len, scale) =>
@@ -209,6 +211,15 @@ ubSignal = devMode and ubShortSource > upperBand ? ubShortSource*1.01 : na
 plot(lbSignal, color=color.yellow, linewidth=2, style=plot.style_circles)
 plot(ubSignal, color=color.yellow, linewidth=2, style=plot.style_circles)
 
+AverageBarsInTrades() =>
+    result = 0
+    for i = 0 to strategy.closedtrades-1
+        result += strategy.closedtrades.exit_bar_index(i) - strategy.closedtrades.entry_bar_index(i) + 1
+    math.round(strategy.closedtrades > 0 ? result / strategy.closedtrades : na)
+
+avgBarsInTrades = AverageBarsInTrades()
+barsSinceLastEntry = bar_index - strategy.opentrades.entry_bar_index(strategy.opentrades - 1)
+
 if barstate.islastconfirmedhistory
     t0 = strategy.closedtrades.entry_time(0)
     t1 = strategy.closedtrades.exit_time(strategy.closedtrades - 1)
@@ -216,12 +227,14 @@ if barstate.islastconfirmedhistory
     prettyDay = (dayofmonth(t0) > 9 ? '' : '0') + str.tostring(dayofmonth(t0))
     profitPerDay = nz(strategy.netprofit) / ((t1 - t0) / 86400000)
     risk = math.min(stopLossPercent / 100, 1.0) * strategy.initial_capital
-    summary = str.format('First trade date: {0}-{1}-{2}\nDaily profit: ${3}\nPosition average price: ${4}\nUnrealized profit/loss: ${5}\nRisk/Reward ratio: {6}',
+    summary = str.format('First trade date: {0}-{1}-{2}\nDaily profit: ${3}\nPosition average price: ${4}\nUnrealized profit/loss: ${5}\nRisk/Reward ratio: {6}\nAvarage bars in trades: {7}\nBars since last entry: {8}',
          str.tostring(year(t0)), prettyMonth, prettyDay,
          math.round(profitPerDay, 2),
          math.round(nz(strategy.position_avg_price), 2),
          math.round(nz(strategy.openprofit), 2),
-         math.round(risk / strategy.netprofit, 2))
+         math.round(risk / strategy.netprofit, 2),
+         avgBarsInTrades,
+         barsSinceLastEntry)
     tbl = table.new(position.top_right, 1, 1)
     table.cell(tbl, 0, 0, 'ⓘ', text_color = color.blue, tooltip=summary)
 
@@ -232,6 +245,9 @@ profitPercent = strategy.opentrades > 0 ? 100 * (close / strategy.position_avg_p
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (longCfrmEnabled ? longConfirmed : true)
 shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (shortCfrmEnabled ? shortConfirmed : true)
 
+// determine if bars limit is reached in current trade
+barsLimitReached = barsLimitEnabled ? barsSinceLastEntry > barsLimit : false
+
 // -- must close positions here --
 
 // reduce position - only effective if there are any positions with the corresponding id
@@ -239,9 +255,9 @@ strategy.close('average down', comment='reduce long', when=(close >= strategy.po
 strategy.close('average up', comment='reduce short', when=(close <= strategy.position_avg_price))
 
 // take profit
-strategy.close('buy', when=(shouldSell or profitPercent >= takeProfitPercent or profitPercent <= -stopLossPercent),
+strategy.close('buy', when=(shouldSell or profitPercent >= takeProfitPercent or profitPercent <= -stopLossPercent or barsLimitReached),
      comment=str.format('{0}: {1}%', profitPercent >= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
-strategy.close('sell', when=(shouldBuy or profitPercent <= -takeProfitPercent or profitPercent >= stopLossPercent),
+strategy.close('sell', when=(shouldBuy or profitPercent <= -takeProfitPercent or profitPercent >= stopLossPercent or barsLimitReached),
      comment=str.format('{0}: {1}%', profitPercent <= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
 
 // -- open positions here --

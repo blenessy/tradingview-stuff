@@ -105,6 +105,8 @@ The below parameters are used in the ema.env template.
 | `PYRAMIDING_REBUY_RESISTANCE` | 0.01 | (avg. position price / `LB_LONG_SOURCE` price) >= `PYRAMIDING_REBUY_RESISTANCE` before considering to open new long-position. |
 | `PYRAMIDING_REBUY_USE_POS_AVG_PRICE` | true | When considering to rebuy use the open position's average price instead of the last opened position. |
 | `PYRAMIDING_IRREDUCIBLE_POSITIONS` | 100 | Number of position to keep open for profit, the rest will be closed at beak-event to protect bot from long downtrends. Set to >= `PYRAMIDING` to disable. |
+| `BARS_LIMIT_ENABLED` | false | Enable limiting of number of bars allowed in a trade |
+| `BARS_LIMIT` | `100` | Number of bars allowed in a trade |
 | **Input configuration** |
 | `LB_ALMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
 | `UB_ALMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
