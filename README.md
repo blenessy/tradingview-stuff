@@ -116,7 +116,9 @@ The below parameters are used in the ema.env template.
 | `LC_ALMA_INPUT_PREFIX` | input. | Set to `hidden_input_` if you want the args to be hidden in the configuration (Inputs tab). |
 | `SC_VAMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
 | `LC_VAMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
-
+| **UI configuration** |
+| `SHOW_INFO_BOX` | false | Show/hide information box about the strategy performance. When set to `false`, info is instead in the `ⓘ` tooltip. |
+| `SHOW_SIGNAL_MARKERS` | false | Show/hide yellow dots below/above chart, marking where price crossed upper/lower band. |
 
 # What is [FTX](https://ftx.com/)?
 

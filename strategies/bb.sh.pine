@@ -23,6 +23,7 @@ ubgrp = 'Upper Band - Sell'
 advgrp = 'Pyramiding'
 scgrp = 'Short confirmation'
 lcgrp = 'Long confirmation'
+uigrp = 'UI configuration'
 
 // General Inputs
 longEnabled = input.bool(${LONG_TRADES:-true}, 'Long trades', inline='mode')
@@ -112,6 +113,10 @@ takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-100}, 'Take profit %', mi
 stopLossPercent = input.float(${STOP_LOSS_PERCENT:-100}, 'Stop loss %', minval=.1, step=.2, group=advgrp, inline='rr')
 barsLimitEnabled = input.bool(${BARS_LIMIT_ENABLED:-false}, 'Limit max bars in entry', group=advgrp, inline='bars')
 barsLimit = input.int(${BARS_LIMIT:-100}, '', step=1, minval=1, group=advgrp, inline='bars')
+
+// UI specific configuration options
+showInfoBox = input.bool(${SHOW_INFO_BOX:-false}, 'Show info box', group=uigrp)
+showSignalMarkers = input.bool(${SHOW_SIGNAL_MARKERS:-false}, 'Show signal markers', group=uigrp)
 
 // https://medium.com/the-investors-handbook/a-new-variation-on-the-bollinger-bands-in-python-7f6d91f02c5e
 vama(src, dev1Len, dev2Len, scale) =>
@@ -206,11 +211,12 @@ p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
 p4 = plot(ubShortSource, 'Sell', color=colorTradeZone)
 fill(p3, p4, color=colorTradeZone)
 
-lbSignal = devMode and lbLongSource < lowerBand ? lbLongSource*0.99 : na
-ubSignal = devMode and ubShortSource > upperBand ? ubShortSource*1.01 : na
+lbSignal = showSignalMarkers and lbLongSource < lowerBand ? lbLongSource*0.99 : na
+ubSignal = showSignalMarkers and ubShortSource > upperBand ? ubShortSource*1.01 : na
 plot(lbSignal, color=color.yellow, linewidth=2, style=plot.style_circles)
 plot(ubSignal, color=color.yellow, linewidth=2, style=plot.style_circles)
 
+// Information box about the strategy performance
 AverageBarsInTrades() =>
     result = 0
     for i = 0 to strategy.closedtrades-1
@@ -235,8 +241,13 @@ if barstate.islastconfirmedhistory
          math.round(risk / strategy.netprofit, 2),
          avgBarsInTrades,
          barsSinceLastEntry)
-    tbl = table.new(position.top_right, 1, 1)
-    table.cell(tbl, 0, 0, 'ⓘ', text_color = color.blue, tooltip=summary)
+
+    if showInfoBox
+        tbl = table.new(position.top_right, 1, 1, bgcolor=color.black, frame_color=color.silver, frame_width=1, border_color=color.gray, border_width=1)
+        table.cell(tbl, 0, 0, summary, text_color = color.silver, text_halign=text.align_left, text_size=size.small)
+    else
+        tbl = table.new(position.top_right, 1, 1)
+        table.cell(tbl, 0, 0, 'ⓘ', text_color = color.blue, tooltip=summary)
 
 // calculate the profit as it stands right now
 profitPercent = strategy.opentrades > 0 ? 100 * (close / strategy.position_avg_price - 1) : .0
