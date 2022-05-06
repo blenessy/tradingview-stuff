@@ -111,8 +111,8 @@ rebuyUsePosAvgPrice = input.bool(${PYRAMIDING_REBUY_USE_POS_AVG_PRICE:-true}, 'U
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', step=1, minval=1, group=advgrp)
 takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-100}, 'Take profit %', minval=.1, step=.2, group=advgrp, inline='rr')
 stopLossPercent = input.float(${STOP_LOSS_PERCENT:-100}, 'Stop loss %', minval=.1, step=.2, group=advgrp, inline='rr')
-barsLimitEnabled = input.bool(${BARS_LIMIT_ENABLED:-false}, 'Limit max bars in entry', group=advgrp, inline='bars')
-barsLimit = input.int(${BARS_LIMIT:-100}, '', step=1, minval=1, group=advgrp, inline='bars')
+barsLimit = input.int(${BARS_LIMIT:-10000}, 'Limit max bars in entry', step=1, minval=1, group=advgrp, inline='bars')
+barsLimitBreakEven = input.bool(${BARS_LIMIT_BREAK_EVEN:-false}, 'break even', group=advgrp, inline='bars')
 
 // UI specific configuration options
 showInfoBox = input.bool(${SHOW_INFO_BOX:-false}, 'Show info box', group=uigrp)
@@ -257,7 +257,7 @@ shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (longCfr
 shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (shortCfrmEnabled ? shortConfirmed : true)
 
 // determine if bars limit is reached in current trade
-barsLimitReached = barsLimitEnabled ? barsSinceLastEntry > barsLimit : false
+barsLimitReached = barsSinceLastEntry > barsLimit and (not barsLimitBreakEven or strategy.openprofit >= 0)
 
 // -- must close positions here --
 
