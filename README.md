@@ -36,7 +36,7 @@ The below parameters are used in the ema.env template.
 
 | Name | Default | Description |
 | --- | --- | --- |
-| `BACKTEST_START` | '2021-04-01T00:00:00' | The start date for backtesting in UTC format, e.g. '2021-04-01T00:00:00'. Note that the effective backtest start time depends on `CHART_TIMEFRAME` and your subscription. |
+| `BACKTEST_END` | '2022-04-01T00:00:00' | See separate chapter about this below. |
 | `CHART_TICKERID` | '60' | The ticker to use in the strategy, e.g. 'FTX:BTCPERP' |
 | `CHART_TIMEFRAME` | 'FTX:BTCPERP' | The candlestick resolution, e.g. 60s. |
 | `COMMISSION_PERCENT` | 0.07 | Cost of trades at exchange |
@@ -51,7 +51,6 @@ The below parameters are used in the ema.env template.
 | `STOP_LOSS_PERCENT` | 100 | When to close a loosing position. |
 | `TITLE` | 'Bollinger Bands Strategy' | Strategy title |
 | `TAKE_PROFIT_PERCENT` | 100 | When to close a winning position. |
-| `TRADE_START` | `BACKTEST_START` | The start date for trading in UTC format, e.g. '2022-04-01T00:00:00'. Perticularly useful if `QTY_TYPE` = strategy.percent_of_equity. |
 | **Bollinger Bands common configuration** |
 | `ALMA_OFFSET` | 0.85 | Arnoud Legoux Moving Average offset parameter. Controls tradeoff between smoothness (closer to 1) and responsiveness (closer to 0). |
 | `ALMA_SIGMA` | 6 | Changes the smoothness of ALMA. The larger sigma the smoother ALMA. |
@@ -119,6 +118,22 @@ The below parameters are used in the ema.env template.
 | **UI configuration** |
 | `SHOW_INFO_BOX` | false | Show/hide information box about the strategy performance. When set to `false`, info is instead in the `ⓘ` tooltip. |
 | `SHOW_SIGNAL_MARKERS` | false | Show/hide yellow dots below/above chart, marking where price crossed upper/lower band. |
+
+### Back-testing and Forward-testing
+
+Inspired by [this article](https://www.investopedia.com/articles/trading/10/backtesting-walkforward-important-correlation.asp) and
+according to industry best-practices in training neural networks, a good Bot should perform equally well on both new and old data sets. The opposite - a "bad" BOT - usually perfoms perfectly on the backtested data but fails miserable in real trades.
+This phenomenon is known as [ovefitting](https://en.wikipedia.org/wiki/Overfitting) in Machine Learning.
+
+This Bot supports both back-testing and forward-testing to minimise overfitting. 
+
+Back-testing is enabled with `DEV_MODE=true`. The absolute time when back-testing ends is controlled through `BACKTEST_END`.
+
+Forward-testing is enabled with `DEV_MODE=false`. The absolute time when forward-testing starts is controlled through `BACKTEST_END`.
+
+It is recommended to select `BACKTEST_END` so that your forward test period is at least 30% of your backtest period.
+
+Example: if 100 trades are made during back-testing, you should pick `BACKTEST_END` so that you get 30 or more trades.
 
 # What is [FTX](https://ftx.com/)?
 
