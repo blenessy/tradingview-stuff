@@ -24,6 +24,7 @@ advgrp = 'Pyramiding'
 scgrp = 'Short confirmation'
 lcgrp = 'Long confirmation'
 uigrp = 'UI configuration'
+tslgrp = 'Trailing stop loss'
 
 // General Inputs
 longEnabled = input.bool(${LONG_TRADES:-true}, 'Long trades', inline='mode')
@@ -108,9 +109,16 @@ rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resist
 rebuyUsePosAvgPrice = input.bool(${PYRAMIDING_REBUY_USE_POS_AVG_PRICE:-true}, 'Use pos. average price', group=advgrp, inline='rebuy')
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', step=1, minval=1, group=advgrp)
 takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-100}, 'Take profit %', minval=.1, step=.2, group=advgrp, inline='rr')
-stopLossPercent = input.float(${STOP_LOSS_PERCENT:-100}, 'Stop loss %', minval=.1, step=.2, group=advgrp, inline='rr')
 barsLimit = input.int(${BARS_LIMIT:-10000}, 'Limit max bars in entry', step=1, minval=1, group=advgrp, inline='bars')
 barsLimitBreakEven = input.bool(${BARS_LIMIT_BREAK_EVEN:-false}, 'break even', group=advgrp, inline='bars')
+
+tslType = input.string(${TSL_TYPE:-'ATR'}, 'Trailing stop loss type', group=tslgrp, inline='tsl1', options=['Disabled', 'Percent', 'ATR'])
+tslSource = input.source(${TSL_SOURCE:-close}, 'Source', group=tslgrp, inline='tsl1')
+tslCloseLongSource = input.source(${TSL_CLOSE_LONG_SOURCE:-low}, 'Close long trigger', group=tslgrp, inline='tsl2')
+tslCloseShortSource = input.source(${TSL_CLOSE_SHORT_SOURCE:-high}, 'Close short trigger', group=tslgrp, inline='tsl2')
+tslPercent = input.float(${TSL_PERCENT:-18}, 'Percent', minval=.1, step=.2, group=tslgrp)
+tslATRLength = input.int(${TSL_ATR_LENGTH:-100}, 'ATR length', minval=1, step=1, group=tslgrp, inline='tslatr')
+tslATRMult = input.int(${TSL_ATR_MULTIPLIER:-16}, 'ATR multiplier', minval=1, step=1, group=tslgrp, inline='tslatr')
 
 // UI specific configuration options
 showInfoBox = input.bool(${SHOW_INFO_BOX:-false}, 'Show info box', group=uigrp)
@@ -230,7 +238,7 @@ if barstate.islastconfirmedhistory
     prettyMonth = (month(t0) > 9 ? '' : '0') + str.tostring(month(t0))
     prettyDay = (dayofmonth(t0) > 9 ? '' : '0') + str.tostring(dayofmonth(t0))
     profitPerDay = nz(strategy.netprofit) / ((t1 - t0) / 86400000)
-    risk = math.min(stopLossPercent / 100, 1.0) * strategy.initial_capital
+    risk = math.min(tslPercent / 100, 1.0) * strategy.initial_capital
     summary = str.format('First trade date: {0}-{1}-{2}\nDaily profit: \${3}\nPosition average price: \${4}\nUnrealized profit/loss: \${5}\nRisk/Reward ratio: {6}\nAvarage bars in trades: {7}\nBars since last entry: {8}',
          str.tostring(year(t0)), prettyMonth, prettyDay,
          math.round(profitPerDay, 2),
@@ -250,6 +258,28 @@ if barstate.islastconfirmedhistory
 // calculate the profit as it stands right now
 profitPercent = strategy.opentrades > 0 ? 100 * (close / strategy.position_avg_price - 1) : .0
 
+// Trailing Stop Loss calculation
+getTrailingStopLoss() =>
+    switch tslType
+        'Percent' => (tslSource * tslPercent) / 100
+        'ATR' => ta.atr(tslATRLength) * tslATRMult
+        => na
+
+// Initialize trailing stop loss
+var float trailingSL = na
+tslTriggered = false
+tslValue = getTrailingStopLoss()
+
+if (tslType != 'Disabled')
+    trailingSL := strategy.position_size > 0 ? ( barsSinceLastEntry == 0 ? tslSource - tslValue : math.max(tslSource - tslValue, nz(trailingSL[1])) )
+               :  strategy.position_size < 0 ? ( barsSinceLastEntry == 0 ? tslSource + tslValue : math.min(tslSource + tslValue, nz(trailingSL[1])) )
+               :  na
+    
+    tslTriggered := (strategy.position_size > 0 and tslCloseLongSource  < nz(trailingSL))
+                 or (strategy.position_size < 0 and tslCloseShortSource > nz(trailingSL))
+    
+plot(trailingSL, color=color.gray, linewidth=1, style=plot.style_circles)
+
 // determine whether it is a good idea to enter long/short positions
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (longCfrmEnabled ? longConfirmed : true)
 shouldSell = compareSources(ubShortStrategy, ubShortSource, upperBand) and (shortCfrmEnabled ? shortConfirmed : true)
@@ -264,9 +294,9 @@ strategy.close('average down', comment='reduce long', when=(close >= strategy.po
 strategy.close('average up', comment='reduce short', when=(close <= strategy.position_avg_price))
 
 // take profit
-strategy.close('buy', when=(shouldSell or profitPercent >= takeProfitPercent or profitPercent <= -stopLossPercent or barsLimitReached),
+strategy.close('buy', when=(shouldSell or profitPercent >= takeProfitPercent or barsLimitReached or tslTriggered),
      comment=str.format('{0}: {1}%', profitPercent >= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
-strategy.close('sell', when=(shouldBuy or profitPercent <= -takeProfitPercent or profitPercent >= stopLossPercent or barsLimitReached),
+strategy.close('sell', when=(shouldBuy or profitPercent <= -takeProfitPercent or barsLimitReached or tslTriggered),
      comment=str.format('{0}: {1}%', profitPercent <= 0 ? 'profit' : 'loss',  math.round(math.abs(profitPercent), 2)))
 
 // -- open positions here --

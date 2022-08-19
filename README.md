@@ -77,10 +77,10 @@ The below parameters are used in the ema.env template.
 | `LB_VAMA_FAST_LENGTH` | `VAMA_FAST_LENGTH` | Overrides `VAMA_FAST_LENGTH`. |
 | `LB_VAMA_WEIGHT` | `VAMA_WEIGHT` | Overrides `VAMA_WEIGHT`. |
 | **Long position confirmation configuration** |
-| `LONG_CONFIRMATION` | `Disabled` | Enables confirmation of long positions based on selected method, e.g. `RSI` |
-| `LONG_CONFIRMATION_SOURCE` | `ohlc4` | The source input to use, e.g. low, high, close, ohlc4, etc. |
-| `LONG_CONFIRMATION_LENGTH` | `10` | Number of candle sticks to include in calculation |
-| `LONG_CONFIRMATION_LIMIT` | `30` | Limit that needs to be crossed down to confirm long position |
+| `LONG_CONFIRMATION` | 'Disabled' | Enables confirmation of long positions based on selected method, e.g. `RSI` |
+| `LONG_CONFIRMATION_SOURCE` | ohlc4 | The source input to use, e.g. low, high, close, ohlc4, etc. |
+| `LONG_CONFIRMATION_LENGTH` | 10 | Number of candle sticks to include in calculation |
+| `LONG_CONFIRMATION_LIMIT` | 30 | Limit that needs to be crossed down to confirm long position |
 | **Upper Band configuration** |
 | `UB_ALMA_OFFSET` | `ALMA_OFFSET` | Overrides `ALMA_OFFSET`. |
 | `UB_ALMA_SIGMA` | `ALMA_SIGMA` | Overrides `ALMA_SIGMA`. |
@@ -96,16 +96,24 @@ The below parameters are used in the ema.env template.
 | `UB_VAMA_FAST_LENGTH` | `VAMA_FAST_LENGTH` | Overrides `VAMA_FAST_LENGTH`. |
 | `UB_VAMA_WEIGHT` | `VAMA_WEIGHT` | Overrides `VAMA_WEIGHT`. |
 | **Short position confirmation configuration** |
-| `SHORT_CONFIRMATION` | `Disabled` | Enables confirmation of short positions based on selected method, e.g. `RSI` |
-| `SHORT_CONFIRMATION_SOURCE` | `ohlc4` | The source input to use, e.g. low, high, close, ohlc4, etc. |
-| `SHORT_CONFIRMATION_LENGTH` | `10` | Number of candle sticks to include in calculation |
-| `SHORT_CONFIRMATION_LIMIT` | `70` | Limit that needs to be crossed up to confirm short position |
+| `SHORT_CONFIRMATION` | 'Disabled' | Enables confirmation of short positions based on selected method, e.g. `RSI` |
+| `SHORT_CONFIRMATION_SOURCE` | ohlc4 | The source input to use, e.g. low, high, close, ohlc4, etc. |
+| `SHORT_CONFIRMATION_LENGTH` | 10 | Number of candle sticks to include in calculation |
+| `SHORT_CONFIRMATION_LIMIT` | 70 | Limit that needs to be crossed up to confirm short position |
 | **Pyramiding related configuration** |
 | `PYRAMIDING_REBUY_RESISTANCE` | 0.01 | (avg. position price / `LB_LONG_SOURCE` price) >= `PYRAMIDING_REBUY_RESISTANCE` before considering to open new long-position. |
 | `PYRAMIDING_REBUY_USE_POS_AVG_PRICE` | true | When considering to rebuy use the open position's average price instead of the last opened position. |
 | `PYRAMIDING_IRREDUCIBLE_POSITIONS` | 100 | Number of position to keep open for profit, the rest will be closed at beak-event to protect bot from long downtrends. Set to >= `PYRAMIDING` to disable. |
-| `BARS_LIMIT` | `1000` | Number of bars allowed in a trade |
+| `BARS_LIMIT` | 1000 | Number of bars allowed in a trade |
 | `BARS_LIMIT_BREAK_EVEN` | false | Wait for a break-even (or profitable) position before closing |
+| **Trailing Stop Loss configuration** |
+| `TSL_TYPE` | 'ATR' | Trailing stop loss type, i.e. how the trailing stop loss is calculated. Options are Average True Range (ATR) and Percent. |
+| `TSL_SOURCE` | close |  |
+| `TSL_CLOSE_LONG_SOURCE` | low | The source to compare with in order to trigger the stop loss for longs. |
+| `TSL_CLOSE_SHORT_SOURCE` | high | The source to compare with in order to trigger the stop loss for shorts. |
+| `TSL_PERCENT` | 18 | Percent to use when Percent is selected as trailing stop loss type. |
+| `TSL_ATR_LENGTH` | 100 | Number of bars when calculating Average True Range. Used when ATR is selected as trailing stop loss type. |
+| `TSL_ATR_MULTIPLIER` | 16 | Multiplier, i.e., number of ATRs to use when calculating the trailing stop loss. Used when ATR is selected as trailing stop loss type. |
 | **Input configuration** |
 | `LB_ALMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
 | `UB_ALMA_INPUT_PREFIX` | hidden_input_ | Set to `input.` if you want the args to show up in the configuration (Inputs tab). |
