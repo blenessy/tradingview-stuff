@@ -38,7 +38,7 @@ backtestEnd = input.time(timestamp(${BACKTEST_END:-'2022-04-01T00:00:00'}), 'Bac
 
 // BB Low configuration
 lbMAType = input.string(${LB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inline='lbma1', group=lbgrp,
-     options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+     options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA', 'MGD'])
 lbMALen = input.int(${LB_MA_LENGTH:-${MA_LENGTH:-9}}, 'MA length', step=1, minval=3, inline='lbma1', group=lbgrp)
 lbMASource = input.source(${LB_MA_SOURCE:-${MA_SOURCE:-low}}, 'MA source', group=lbgrp)
 
@@ -63,7 +63,7 @@ longCfrmSource = input.source(${LONG_CONFIRMATION_SOURCE:-ohlc4}, 'Source', inli
 longCfrmLength = input.int(${LONG_CONFIRMATION_LENGTH:-10}, minval=1, title='Length', inline='lc2', group=lcgrp)
 longCfrmLimit = input.int(${LONG_CONFIRMATION_LIMIT:-30}, minval=1, title='Limit', inline='lc2', group=lcgrp)
 
-lcMAType = input.string(${LC_MA_TYPE:-'Disabled'}, 'Moving average', inline='lcma', group=lcgrp, options=['Disabled', 'ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+lcMAType = input.string(${LC_MA_TYPE:-'Disabled'}, 'Moving average', inline='lcma', group=lcgrp, options=['Disabled', 'ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA', 'MGD'])
 lcMALength = input.int(${LC_MA_LENGTH:-5}, 'MA length', step=1, minval=3, inline='lcma', group=lcgrp)
 lcAlmaOffset = ${LC_ALMA_INPUT_PREFIX:-input.}float(${LC_ALMA_OFFSET:-0.85}, 'ALMA offset', step=.01, minval=.01, inline='lcalma', group=lcgrp)
 lcAlmaSigma = ${LC_ALMA_INPUT_PREFIX:-input.}float(${LC_ALMA_SIGMA:-6.0}, 'ALMA sigma', step=.1, minval=.1, inline='lcalma', group=lcgrp)
@@ -72,7 +72,7 @@ lcVamaWeight = ${LC_VAMA_INPUT_PREFIX:-hidden_input_}float(${LC_VAMA_WEIGHT:-.2}
 
 // BB High configuration
 ubMAType = input.string(${UB_MA_TYPE:-${MA_TYPE:-'EMA'}}, 'Moving average', inline='ubma1', group=ubgrp,
-     options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+     options=['ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA', 'MGD'])
 ubMALen = input.int(${UB_MA_LENGTH:-${MA_LENGTH:-9}}, 'MA length', step=1, minval=3, inline='ubma1', group=ubgrp)
 ubMASource = input.source(${UB_MA_SOURCE:-${MA_SOURCE:-high}}, 'MA source', group=ubgrp)
 
@@ -97,7 +97,7 @@ shortCfrmSource = input.source(${SHORT_CONFIRMATION_SOURCE:-ohlc4}, 'Source', in
 shortCfrmLength = input.int(${SHORT_CONFIRMATION_LENGTH:-10}, minval=1, title='Length', inline='sc2', group=scgrp)
 shortCfrmLimit = input.int(${SHORT_CONFIRMATION_LIMIT:-70}, minval=1, title='Limit', inline='sc2', group=scgrp)
 
-scMAType = input.string(${SC_MA_TYPE:-'Disabled'}, 'Moving average', inline='scma', group=scgrp, options=['Disabled', 'ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA'])
+scMAType = input.string(${SC_MA_TYPE:-'Disabled'}, 'Moving average', inline='scma', group=scgrp, options=['Disabled', 'ALMA', 'EMA', 'SMA', 'WMA', 'VWMA', 'RMA', 'HMA', 'VAMA', 'MGD'])
 scMALength = input.int(${SC_MA_LENGTH:-5}, 'MA length', step=1, minval=3, inline='scma', group=scgrp)
 scAlmaOffset = ${SC_ALMA_INPUT_PREFIX:-input.}float(${SC_ALMA_OFFSET:-0.85}, 'ALMA offset', step=.01, minval=.01, inline='scalma', group=scgrp)
 scAlmaSigma = ${SC_ALMA_INPUT_PREFIX:-input.}float(${SC_ALMA_SIGMA:-6.0}, 'ALMA sigma', step=.1, minval=.1, inline='scalma', group=scgrp)
@@ -132,6 +132,11 @@ vama(src, dev1Len, dev2Len, scale) =>
     ma = float(na)
     ma := alpha * src + (1 - alpha) * nz(ma[1])
 
+// https://blog.earn2trade.com/mcginley-dynamic-indicator/
+mcginley_dynamic(src, length) =>
+    ma = 0.0
+    ma := barstate.isfirst ? src : ma[1] + (src - ma[1]) / (0.6 * length * math.pow(src / ma[1], 4))
+
 movingAverage(type, src, length) =>
     switch type
         'EMA' => ta.ema(src, length)
@@ -140,6 +145,7 @@ movingAverage(type, src, length) =>
         'SMA' => ta.sma(src, length)
         'VWMA' => ta.vwma(src, length)
         'WMA' => ta.wma(src, length)
+        'MGD' => mcginley_dynamic(src, length)
         => float(na)
 
 deviation(type, src, length) =>
