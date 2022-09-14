@@ -223,8 +223,8 @@ p3 = plot(lbLongSource, 'Buy', color=colorTradeZone)
 p4 = plot(ubShortSource, 'Sell', color=colorTradeZone)
 fill(p3, p4, color=colorTradeZone)
 
-lbSignal = showSignalMarkers and lbLongSource < lowerBand ? lbLongSource*0.99 : na
-ubSignal = showSignalMarkers and ubShortSource > upperBand ? ubShortSource*1.01 : na
+lbSignal = showSignalMarkers and compareSources(lbLongStrategy, lbLongSource, lowerBand) ? lbLongSource*0.99 : na
+ubSignal = showSignalMarkers and compareSources(ubShortStrategy, ubShortSource, upperBand) ? ubShortSource*1.01 : na
 plot(lbSignal, color=color.yellow, linewidth=2, style=plot.style_circles)
 plot(ubSignal, color=color.yellow, linewidth=2, style=plot.style_circles)
 
