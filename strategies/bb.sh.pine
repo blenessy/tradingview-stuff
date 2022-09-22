@@ -108,17 +108,16 @@ scVamaWeight = ${SC_VAMA_INPUT_PREFIX:-hidden_input_}float(${SC_VAMA_WEIGHT:-.2}
 rebuyResistance = input.float(${PYRAMIDING_REBUY_RESISTANCE:-.01}, 'Rebuy resistance', minval=.01, step=.01, group=advgrp, inline='rebuy')
 rebuyUsePosAvgPrice = input.bool(${PYRAMIDING_REBUY_USE_POS_AVG_PRICE:-true}, 'Use pos. average price', group=advgrp, inline='rebuy')
 irreduciblePositions = input.int(${PYRAMIDING_IRREDUCIBLE_POSITIONS:-100}, 'Irreducible positions', step=1, minval=1, group=advgrp)
-takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-100}, 'Take profit %', minval=.1, step=.2, group=advgrp, inline='rr')
+takeProfitPercent = input.float(${TAKE_PROFIT_PERCENT:-100}, 'Take profit %', minval=.1, step=.2, group=advgrp, inline='tp')
+takeProfitRevertsPosition = input.bool(${TAKE_PROFIT_REVERTS_POSITION:-false}, 'Take profit reverts position', group=advgrp, inline='tp')
 barsLimit = input.int(${BARS_LIMIT:-10000}, 'Limit max bars in entry', step=1, minval=1, group=advgrp, inline='bars')
 barsLimitBreakEven = input.bool(${BARS_LIMIT_BREAK_EVEN:-false}, 'break even', group=advgrp, inline='bars')
 
-tslType = input.string(${TSL_TYPE:-'ATR'}, 'Trailing stop loss type', group=tslgrp, inline='tsl1', options=['Disabled', 'Percent', 'ATR'])
-tslSource = input.source(${TSL_SOURCE:-close}, 'Source', group=tslgrp, inline='tsl1')
-tslCloseLongSource = input.source(${TSL_CLOSE_LONG_SOURCE:-low}, 'Close long trigger', group=tslgrp, inline='tsl2')
-tslCloseShortSource = input.source(${TSL_CLOSE_SHORT_SOURCE:-high}, 'Close short trigger', group=tslgrp, inline='tsl2')
-tslPercent = input.float(${TSL_PERCENT:-18}, 'Percent', minval=.1, step=.2, group=tslgrp)
+tslType = input.string(${TSL_TYPE:-'ATR'}, 'Stop loss type', group=tslgrp, inline='tsl1', options=['Disabled', 'Percent', 'ATR'])
+tslPercent = input.float(${TSL_PERCENT:-18}, 'Percent', minval=.1, step=.2, group=tslgrp, inline='tsl1')
 tslATRLength = input.int(${TSL_ATR_LENGTH:-100}, 'ATR length', minval=1, step=1, group=tslgrp, inline='tslatr')
 tslATRMult = input.int(${TSL_ATR_MULTIPLIER:-16}, 'ATR multiplier', minval=1, step=1, group=tslgrp, inline='tslatr')
+tslRevertsPosition = input.bool(${TSL_REVERTS_POSITION:-false}, 'Trailing stop loss reverts position', group=tslgrp)
 
 // UI specific configuration options
 showInfoBox = input.bool(${SHOW_INFO_BOX:-false}, 'Show info box', group=uigrp)
@@ -265,10 +264,12 @@ if barstate.islastconfirmedhistory
 profitPercent = strategy.opentrades > 0 ? 100 * (close / strategy.position_avg_price - 1) : .0
 
 // Trailing Stop Loss calculation
+tslSource = close
 getTrailingStopLoss() =>
+    // Use Percent when the number of available bars is too low, giving ATR = 0
     switch tslType
         'Percent' => (tslSource * tslPercent) / 100
-        'ATR' => ta.atr(tslATRLength) * tslATRMult
+        'ATR' => (bar_index - barsSinceLastEntry) < tslATRLength ? (tslSource * tslPercent) / 100 : ta.atr(tslATRLength) * tslATRMult
         => na
 
 // Initialize trailing stop loss
@@ -276,15 +277,23 @@ var float trailingSL = na
 tslTriggered = false
 tslValue = getTrailingStopLoss()
 
+// Determine position direction
+positionIsLong = strategy.position_size > 0 ? true : false
+positionIsShort = strategy.position_size < 0 ? true : false
+
 if (tslType != 'Disabled')
-    trailingSL := strategy.position_size > 0 ? ( barsSinceLastEntry == 0 ? tslSource - tslValue : math.max(tslSource - tslValue, nz(trailingSL[1])) )
-               :  strategy.position_size < 0 ? ( barsSinceLastEntry == 0 ? tslSource + tslValue : math.min(tslSource + tslValue, nz(trailingSL[1])) )
+    trailingSL := positionIsLong ? ( barsSinceLastEntry == 0 ? tslSource - tslValue : math.max(tslSource - tslValue, nz(trailingSL[1])) )
+               :  positionIsShort ? ( barsSinceLastEntry == 0 ? tslSource + tslValue : math.min(tslSource + tslValue, nz(trailingSL[1])) )
                :  na
     
-    tslTriggered := (strategy.position_size > 0 and tslCloseLongSource  < nz(trailingSL))
-                 or (strategy.position_size < 0 and tslCloseShortSource > nz(trailingSL))
+    tslTriggered := (positionIsLong and ta.crossunder(tslSource, nz(trailingSL)))
+                 or (positionIsShort and ta.crossover(tslSource, nz(trailingSL)))
     
 plot(trailingSL, color=color.gray, linewidth=1, style=plot.style_circles)
+
+// Determine if short/long should be reverted when the Trailing Stop Loss or Take Profit is triggered
+revertLong = positionIsLong and ( (tslTriggered and tslRevertsPosition) or (takeProfitRevertsPosition and profitPercent >= takeProfitPercent) ) ? true : false
+revertShort = positionIsShort and ( (tslTriggered and tslRevertsPosition) or (takeProfitRevertsPosition and profitPercent <= -takeProfitPercent) ) ? true : false
 
 // determine whether it is a good idea to enter long/short positions
 shouldBuy = compareSources(lbLongStrategy, lbLongSource, lowerBand) and (longCfrmEnabled ? longConfirmed : true)
@@ -318,7 +327,7 @@ okOpenShort = shortEnabled and (na(posPrice) or (close / posPrice) >= rebuyResis
 
 // increase position
 longId = strategy.opentrades.entry_id(0) == 'buy' and strategy.opentrades >= irreduciblePositions ? 'average down' : 'buy'
-strategy.entry(longId, strategy.long, when=(okOpenLong and shouldBuy))
+strategy.entry(longId, strategy.long, when=(okOpenLong and (shouldBuy or revertShort)))
 shortId = strategy.opentrades.entry_id(0) == 'sell' and strategy.opentrades >= irreduciblePositions ? 'average up' : 'sell'
-strategy.entry(shortId, strategy.short, when=(okOpenShort and shouldSell))
+strategy.entry(shortId, strategy.short, when=(okOpenShort and (shouldSell or revertLong)))
 EOF
